@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xmusic"
+version = "2.0.0"
+description = "Lightweight, themeable, cross-platform terminal MP3 player with queue, playlists, shuffle/repeat and mouse support"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "miniaudio>=1.60",
+    "mutagen>=1.47",
+    # stdlib audioop was removed in Python 3.13; this restores fast volume scaling (optional at runtime)
+    "audioop-lts>=0.2.1; python_version >= '3.13'",
+]
+keywords = ["music-player", "terminal", "tui", "mp3", "cli"]
+classifiers = [
+    "Environment :: Console",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+]
+
+[project.optional-dependencies]
+dev = ["pyte>=0.8"]
+
+[project.scripts]
+xmusic = "xmusic_core.cli:main"
+
+[tool.setuptools]
+packages = ["xmusic_core"]

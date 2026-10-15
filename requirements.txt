@@ -1,0 +1,4 @@
+miniaudio>=1.60
+mutagen>=1.47
+# Python 3.13+ only: restores the audioop module (fast volume scaling). XMusic still works without it.
+audioop-lts>=0.2.1; python_version >= "3.13"

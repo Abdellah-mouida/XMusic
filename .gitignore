@@ -1,0 +1,16 @@
+# environments & caches
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+# local config / state (never commit)
+config.json
+config.json.bad
+playlists.json
+state.json
+# generated artifacts
+*.spec
+*.log
