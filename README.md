@@ -73,7 +73,7 @@ The Kali console gets its own composition rather than merely recolouring the sta
 - **Adaptive artwork:** the normal logo scales down proportionally only when the terminal is too small to show it at its original size.
 
 <blockquote>
-  <strong>Responsive layout:</strong> there is no minimum terminal size. XMusic automatically scales the marks down and stacks them when the terminal is narrow or short, then restores the full side-by-side design when space is available.
+  <strong>Responsive layout:</strong> there is no minimum terminal size. The logo scales down only when needed; the player and library panes stack on narrow or short terminals and return side by side when space allows.
 </blockquote>
 
 Animations are enabled by default. Press <code>z</code> to toggle them during a session, or launch with <code>--no-animation</code> to disable the intro, Matrix effect, equalizer, and other motion.
