@@ -29,7 +29,7 @@ _KALI_ART = """⠀⠀⠀⠀⠠⠤⠤⠤⠤⠤⣤⣤⣤⣄⣀⣀⠀⠀⠀⠀⠀�
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠃⠀"""
 
 
-XMUSIC_KALI_SCALE = 3
+XMUSIC_KALI_SCALE = 1
 
 
 def xmusic_lines(scale: int = XMUSIC_KALI_SCALE) -> list[str]:

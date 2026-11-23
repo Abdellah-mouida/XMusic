@@ -693,40 +693,23 @@ class Renderer:
             return rows[:H]
 
         inner_w = max(1, W - 4)
-        header_budget = max(1, min(19, H - 7))
-        dragon_source, xmusic_source = logo.kali_lines(), logo.xmusic_lines()
-        placements = []
-        if W >= 60:
-            # Wide composition. The original full-size pair returns when the
-            # available dimensions permit it; otherwise each logo scales down.
-            dragon_slot = min(logo.kali_width(), max(1, int(inner_w * 0.38)))
-            gap = min(3, max(0, inner_w - dragon_slot - 1))
-            xmusic_slot = max(1, inner_w - dragon_slot - gap)
-            dragon_lines = logo.fit_lines(dragon_source, dragon_slot, header_budget)
-            show_author = header_budget >= 5
-            xmusic_lines = logo.fit_lines(xmusic_source, xmusic_slot, max(1, header_budget - (1 if show_author else 0)))
-            header_h = max(len(dragon_lines), len(xmusic_lines) + (1 if show_author else 0))
-            placements.append(("art", dragon_lines, 2, max(0, (header_h - len(dragon_lines)) // 2), dragon_slot))
-            xmusic_y = max(0, (header_h - len(xmusic_lines) - (1 if show_author else 0)) // 2)
-            placements.append(("art", xmusic_lines, 2 + dragon_slot + gap, xmusic_y, xmusic_slot))
-            if show_author:
-                placements.append(("author", [], 2 + dragon_slot + gap, xmusic_y + len(xmusic_lines), xmusic_slot))
-        else:
-            # Narrow composition. Stack the two scaled marks vertically.
-            show_author = header_budget >= 5
-            art_budget = max(2, header_budget - (1 if show_author else 0))
-            dragon_h = max(1, int(art_budget * 0.58))
-            xmusic_h = max(1, art_budget - dragon_h)
-            dragon_lines = logo.fit_lines(dragon_source, inner_w, dragon_h)
-            xmusic_lines = logo.fit_lines(xmusic_source, inner_w, xmusic_h)
-            header_h = len(dragon_lines) + 1 + len(xmusic_lines) + (1 if show_author else 0)
-            dragon_w = max(map(len, dragon_lines))
-            xmusic_w = max(map(len, xmusic_lines))
-            placements.append(("art", dragon_lines, max(0, (W - dragon_w) // 2), 0, dragon_w))
-            xmusic_y = len(dragon_lines) + 1
-            placements.append(("art", xmusic_lines, max(0, (W - xmusic_w) // 2), xmusic_y, xmusic_w))
-            if show_author:
-                placements.append(("author", [], max(0, (W - xmusic_w) // 2), xmusic_y + len(xmusic_lines), xmusic_w))
+        # Keep the original XMusic mark at its natural size. Only scale it
+        # down when the terminal cannot fit it; do not enlarge or add a
+        # separate Kali dragon logo.
+        header_budget = max(1, min(7, H - 7))
+        xmusic_source = logo.xmusic_lines()
+        show_author = header_budget >= 7
+        xmusic_lines = logo.fit_lines(
+            xmusic_source,
+            inner_w,
+            max(1, header_budget - (1 if show_author else 0)),
+        )
+        header_h = len(xmusic_lines) + (1 if show_author else 0)
+        xmusic_w = max(map(len, xmusic_lines), default=0)
+        xmusic_x = max(0, (W - xmusic_w) // 2)
+        placements = [("art", xmusic_lines, xmusic_x, 0, xmusic_w)]
+        if show_author:
+            placements.append(("author", [], xmusic_x, len(xmusic_lines), xmusic_w))
 
         frame = int(time.monotonic() * 8) if self.animate else 0
         for y in range(header_h):

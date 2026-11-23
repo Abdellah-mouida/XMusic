@@ -65,12 +65,12 @@ xmusic --kali --music-dir ~/Music
 
 The Kali console gets its own composition rather than merely recolouring the standard screen:
 
-- **Dual-logo header:** the full-size Kali dragon beside the original XMusic block logo enlarged proportionally by 3×.
+- **Normal XMusic logo:** the original 56×6 XMusic block mark, centered above the player and library.
 - **Author signature:** <code>Made by Abdellah Mouida</code> directly beneath the XMusic mark.
-- **Blue Matrix rain:** animated blue characters flow behind the logos, leaving the lettering crisp.
-- **Colour motion:** a blue-to-cyan wave moves across both marks.
+- **Blue Matrix rain:** animated blue characters flow behind the logo, leaving the lettering crisp.
+- **Colour motion:** a blue-to-cyan wave moves across the logo.
 - **Split lower deck:** a dedicated **PLAYER** pane beside the **PLAYLIST / ARCHIVE** pane.
-- **Adaptive artwork:** the original XMusic glyphs are scaled proportionally to the available space; the full 3× mark returns when the terminal is large enough.
+- **Adaptive artwork:** the normal logo scales down proportionally only when the terminal is too small to show it at its original size.
 
 <blockquote>
   <strong>Responsive layout:</strong> there is no minimum terminal size. XMusic automatically scales the marks down and stacks them when the terminal is narrow or short, then restores the full side-by-side design when space is available.
@@ -175,7 +175,7 @@ xmusic --music-dir ~/Music
 # Standard XMusic interface
 xmusic --music-dir ~/Music
 
-# Kali dragon + Matrix console
+# XMusic logo + Matrix console
 xmusic --kali --music-dir ~/Music
 
 # Select a colour palette
@@ -280,7 +280,7 @@ xmusic_core/
   app.py                 application state, playback, input and event loop
   render.py              terminal rendering, panels, logos and animation
   themes.py              palettes, colour-depth detection and NO_COLOR
-  logo.py                XMusic wordmark and original Kali dragon art
+  logo.py                XMusic wordmark and terminal artwork
   audio.py               streaming audio engine and peak limiter
   library.py             MP3 scanning and lazy metadata loading
   playqueue.py           queue, shuffle and repeat logic
