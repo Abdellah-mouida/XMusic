@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import paths, themes
 
-DEFAULTS = {"version": 2, "theme": "blue", "volume": 70, "muted": False, "music_dir": None,
+DEFAULTS = {"version": 2, "theme": themes.DEFAULT_THEME, "volume": 70, "muted": False, "music_dir": None,
             "shuffle": False, "repeat": "off", "animation": True}
 REPEAT_MODES = ("off", "all", "one")
 

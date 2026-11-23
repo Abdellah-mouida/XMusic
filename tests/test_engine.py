@@ -47,6 +47,18 @@ e.play(good); e.set_volume(100)
 for _ in range(30):                      # rapid track swapping must not raise in the callback thread
     e.play(good, start=_ * 0.1); time.sleep(0.02)
 e.close()
+# Loud mastered beats must not push output samples into digital clipping.
+from array import array
+limiter = Engine(null=True); limiter.set_volume(100)
+hot = array("h", [32767, -32768, 31000, -31000] * 1024)
+limited = array("h"); limited.frombytes(limiter._scale(hot))
+peak = max(abs(sample) for sample in limited)
+before = limiter._limiter_gain
+quiet = array("h", [6000, -6000] * 2048)
+limiter._scale(quiet)
+res.append(ok(peak <= 30000 and before < 1.0, "peak limiter protects loud transients (output peak=%d)" % peak))
+res.append(ok(limiter._limiter_gain > before and limiter._limiter_gain <= 1.0, "limiter releases smoothly after the loud section"))
+
 # pure-Python volume fallback (used when audioop is unavailable) must match the audioop path and play cleanly
 import random
 from array import array

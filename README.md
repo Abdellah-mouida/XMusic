@@ -1,53 +1,62 @@
 ```text
-██      ██  ██      ██  ██      ██    ████████  ██    ████████
-  ██  ██    ████  ████  ██      ██  ██              ██
-    ██      ██  ██  ██  ██      ██    ██████    ██  ██
-  ██  ██    ██      ██  ██      ██          ██  ██  ██
-██      ██  ██      ██    ██████    ████████    ██    ████████
+██╗  ██╗███╗   ███╗██╗   ██╗███████╗██╗ ██████╗
+╚██╗██╔╝████╗ ████║██║   ██║██╔════╝██║██╔════╝
+ ╚███╔╝ ██╔████╔██║██║   ██║███████╗██║██║
+ ██╔██╗ ██║╚██╔╝██║██║   ██║╚════██║██║██║
+██╔╝ ██╗██║ ╚═╝ ██║╚██████╔╝███████║██║╚██████╗
+╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝
 ```
 
 # XMusic
 
 **Your music. Your terminal. Your vibe.**
 
-A lightweight, themeable terminal MP3 player for Linux, macOS and Windows. Real mouse support, six built-in
-themes, queue, playlists, shuffle and repeat, subtle animations - in about 20 MB of RAM. Pure Python, two
-dependencies (`miniaudio`, `mutagen`), no GUI, browser, server or telemetry.
+A lightweight, hacker-styled terminal music player for Linux, macOS and Windows. AMOLED-first visuals, eight
+dark themes, real mouse support, queue, playlists, shuffle and repeat, subtle animations, and peak-safe audio
+playback - in about 20 MB of RAM. Pure Python, two dependencies (`miniaudio`, `mutagen`), no GUI, browser,
+server or telemetry.
 
 ![XMusic main screen](docs/screenshots/main.png)
+
+> Screenshots currently show the previous interface; the live terminal UI now uses the new banner, panel labels and palettes.
 
 ## Features
 
 | | |
 |---|---|
-| **Playback** | play/pause/stop, next/previous, seek (keys or drag the bar), volume, mute, automatic next track, streaming decode (never loads whole files) |
+| **Playback** | play/pause/stop, next/previous, seek, volume, mute, automatic next track, streamed decoding, and a fast-attack peak limiter for hot masters |
 | **Shuffle & repeat** | real shuffle (every track once per cycle, never the same track twice in a row), repeat off / all / one |
 | **Queue** | add to end, play next, remove, move up/down, clear - none of it interrupts the playing track |
 | **Playlists** | create, rename, delete (with confirmation), add/remove tracks, play; stored as readable JSON |
 | **Library** | recursive scan, folder browser, search (title/artist/album/filename), sort, recently played, thousands of tracks |
-| **Themes** | six palettes, live preview, saved between runs, `--theme` flag, `NO_COLOR` respected |
+| **Themes** | eight dark palettes, AMOLED blue default, live preview, saved between runs, `--theme` flag, `NO_COLOR` respected |
 | **Mouse** | click, double-click, wheel, drag progress/volume bars, clickable buttons, dialogs and shortcut hints |
 | **Animations** | logo reveal, equalizer, track-change highlight - all optional (`--no-animation`) |
 
 ## Themes
 
-![All six themes](docs/screenshots/themes.png)
+The in-app picker previews all eight palettes live. The gallery image in `docs/screenshots/themes.png`
+is retained from the earlier six-theme build and has not yet been regenerated.
 
 | ID (`--theme`) | Name | Accents | Background | Text |
 |---|---|---|---|---|
 | `blue` | Blue | `#3D8BFF` `#60A5FA` `#38BDF8` | `#080B12` | `#E5EAF3` |
 | `girly` | Girly / Rose | `#FF78B7` `#FFB6D5` `#F9A8D4` | `#1A1220` | `#FFF1F5` |
 | `yaru` | Yaru Orange | `#E95420` `#FF8C42` `#FFB86B` | `#1A1A1A` | `#F2F0EE` |
-| `amoled-blue` | AMOLED Blue | `#3D8BFF` `#60A5FA` `#38BDF8` | `#000000` | `#F0F4FA` |
+| `amoled-blue` | AMOLED Blue (default) | `#3D8BFF` `#60A5FA` `#38BDF8` | `#000000` | `#F0F4FA` |
 | `amoled-pink` | AMOLED Pink | `#FF2E93` `#FF8AC4` `#FF5CAA` | `#000000` | `#F7F2F5` |
 | `violet` | Violet | `#8B5CF6` `#A78BFA` `#C4B5FD` | `#120B24` | `#EFEAFB` |
+| `amoled-orange` | AMOLED Orange | `#FF861F` `#FFB15C` `#FFD08A` | `#000000` | `#FFF5EB` |
+| `kali` | Kali Linux | `#367BF5` `#66B0FF` `#00D6C5` | `#000000` | `#EAF2FF` |
 
-Aliases accepted: `rose`/`pink` -> girly, `orange`/`ubuntu` -> yaru, `amoled` -> amoled-blue, `purple` -> violet.
-The Yaru theme is only *inspired by* Ubuntu's warm orange look; it is not affiliated with or endorsed by Canonical/Ubuntu.
+Aliases accepted: `rose`/`pink` -> girly, `orange`/`ubuntu` -> yaru, `amoled` -> amoled-blue,
+`amoled-amber` -> amoled-orange, `kali-linux` -> kali, and `purple` -> violet. AMOLED Blue is the default.
+Kali mode uses the supplied dragon mark in a compact terminal raster and a Kali-blue/cyan palette; it is
+community-inspired and is not affiliated with or endorsed by Offensive Security.
 
 Press `t` to open the picker: move with the arrow keys to **preview live**, `Enter` to apply and save, `Esc` to
 cancel (the previous theme returns). With the mouse: click a theme to preview, click again to apply. An unknown
-saved theme silently falls back to `blue`.
+saved theme silently falls back to `amoled-blue`.
 
 ![Theme picker](docs/screenshots/theme-picker.png)
 
@@ -69,6 +78,9 @@ python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 ./venv/bin/python xmusic.py --music-dir ~/Music
 ```
 Audio goes through PulseAudio (PipeWire provides a PulseAudio-compatible server) or ALSA; XMusic never changes system audio settings.
+The output path includes a fast-attack peak limiter (ceiling: 30,000 / 32,767) with a 150 ms release, plus a
+180 ms device buffer to make playback more tolerant of brief scheduling stalls. Normal-level tracks pass
+through without gain reduction; very hot masters are gently attenuated rather than hard-clipped.
 
 ### macOS
 ```bash
@@ -160,7 +172,7 @@ xmusic [--music-dir DIR] [--theme ID] [--no-animation] [--ascii] [--version] [--
 ```
 ```bash
 ./venv/bin/python xmusic.py --music-dir ~/Music
-./venv/bin/python xmusic.py --theme girly            # blue | girly | yaru | amoled-blue | amoled-pink | violet
+./venv/bin/python xmusic.py --theme amoled-orange    # amoled-blue | amoled-orange | kali | blue | girly | yaru | amoled-pink | violet
 ./venv/bin/python xmusic.py --no-animation
 ```
 
@@ -232,9 +244,10 @@ mkdir -p /tmp/Music2 && cp /tmp/Music/Rock/*.mp3 /tmp/Music/Jazz/Gamma.mp3 /tmp/
 ./venv/bin/python tests/test_engine.py /tmp/Music           # headless audio engine on miniaudio's null backend
 ./venv/bin/python tests/test_pty.py /tmp/Music /tmp/Music2  # 118 end-to-end checks in a pseudo-terminal (Linux/macOS)
 ```
-Results at build time (Linux, Python 3.12): 64/64, 22/22, engine all pass, 118/118; `pyflakes` clean. The end-to-end suite uses the
-null audio backend, so it proves decoding, timing, state and UI behaviour - not audible sound. The macOS/Windows rows in
-`test_platform.py` are simulations. Screenshots are regenerated with `tests/make_screenshots.py` (needs `pyte`, `pillow`).
+The recorded baseline results apply to the previous revision; rerun the commands after the audio and theme changes.
+The end-to-end suite uses the null audio backend, so it proves decoding, timing, state and UI behaviour - not audible sound.
+The macOS/Windows rows in `test_platform.py` are simulations. Screenshots can be regenerated with
+`tests/make_screenshots.py` (needs `pyte`, `pillow`).
 
 ## Project structure
 ```text
@@ -254,7 +267,7 @@ xmusic_core/
   audio.py              miniaudio engine (primed generator, streaming, mute, device power)
   library.py            scan + lazy ID3 metadata
   term.py / term_win.py terminal backends (POSIX / Windows) + shared input parser
-  ui.py, logo.py        styled lines, overlays, ASCII fallback, wordmark
+  ui.py, logo.py        styled lines, overlays, ASCII fallback, XMUSIC + Kali dragon marks
 tests/                  suites, benchmarks, screenshot tooling
 docs/screenshots/       real captures from the app
 ```

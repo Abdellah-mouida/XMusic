@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import sys
 
-DEFAULT_THEME = "blue"
+DEFAULT_THEME = "amoled-blue"
 
 
 def _make(tid: str, name: str, desc: str, **b: str) -> dict:
@@ -48,9 +48,16 @@ THEMES: dict[str, dict] = {t["id"]: t for t in (
     _make("violet", "Violet", "Deep purple, vivid violet, lavender",
           bg="120B24", panel="1D1236", border="3B2A6B", accent="8B5CF6", bright="A78BFA", hl="C4B5FD",
           text="EFEAFB", text2="A99BC9", muted="6D5F8F", rem="33285A", ok="86D6A8", warn="E8C37A", err="D9708A"),
+    _make("amoled-orange", "AMOLED Orange", "Pure black, signal orange and warm amber",
+          bg="000000", panel="100A05", border="4A260F", accent="FF861F", bright="FFB15C", hl="FFD08A",
+          text="FFF5EB", text2="B9A18B", muted="68513E", rem="2E1D10", ok="91D29A", warn="FFD078", err="FF766A"),
+    _make("kali", "Kali Linux", "AMOLED black, Kali blue and cyan dragon mark",
+          bg="000000", panel="080D15", border="17385A", accent="367BF5", bright="66B0FF", hl="00D6C5",
+          text="EAF2FF", text2="94A9C7", muted="52647E", rem="1B2D46", ok="53D7A3", warn="F1BD63", err="FF6B78"),
 )}
 ALIASES = {"rose": "girly", "pink": "girly", "orange": "yaru", "ubuntu": "yaru", "amoled": "amoled-blue",
-           "purple": "violet", "default": "blue"}
+           "amoled-amber": "amoled-orange", "kali-linux": "kali",
+           "purple": "violet", "default": DEFAULT_THEME}
 ROLES = tuple(k for k in THEMES["blue"] if k not in ("id", "name", "desc"))
 
 

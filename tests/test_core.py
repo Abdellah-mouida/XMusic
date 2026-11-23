@@ -102,12 +102,12 @@ check(leg.get("Mix") == ["/x.mp3"], "XMusic 1.x playlists migrate into playlists
 
 # ---------------------------------------------------------------- config
 d = Path(tempfile.mkdtemp()); s = config.Settings(d).load()
-check(s["theme"] == "blue" and s["volume"] == 70 and s.warning is None, "defaults on first run")
+check(s["theme"] == themes.DEFAULT_THEME and s["volume"] == 70 and s.warning is None, "AMOLED defaults on first run")
 s["theme"] = "violet"; s["volume"] = 33; s["repeat"] = "all"; s["shuffle"] = True; s.save()
 s2 = config.Settings(d).load(); check((s2["theme"], s2["volume"], s2["repeat"], s2["shuffle"]) == ("violet", 33, "all", True), "settings round-trip")
 (d / "config.json").write_text(json.dumps({"theme": "nonsense", "volume": 9999, "repeat": "weird", "shuffle": "yes", "music_dir": 5}))
 s3 = config.Settings(d).load()
-check((s3["theme"], s3["volume"], s3["repeat"], s3["shuffle"], s3["music_dir"]) == ("blue", 100, "off", False, None), "invalid values fall back safely (theme -> blue, volume clamped)")
+check((s3["theme"], s3["volume"], s3["repeat"], s3["shuffle"], s3["music_dir"]) == (themes.DEFAULT_THEME, 100, "off", False, None), "invalid values fall back safely (theme -> AMOLED blue, volume clamped)")
 (d / "config.json").write_text("{{{ broken"); s4 = config.Settings(d).load()
 check(s4["theme"] == "blue" and s4.warning and (d / "config.json.bad").exists(), "malformed config.json: defaults + backup, no crash")
 (d / "config.json").write_text(json.dumps({"theme": "ROSE"})); check(config.Settings(d).load()["theme"] == "girly", "theme alias/case-insensitive ('ROSE' -> girly)")
@@ -119,12 +119,15 @@ st2 = config.State(d).load(); check((st2.recent, st2.queue, st2.current) == (["/
 # ---------------------------------------------------------------- themes
 req = {"bg", "panel", "border", "accent", "bright", "hl", "text", "text2", "muted", "rem", "ok", "warn", "err", "brand_a", "brand_b",
        "playing", "sel_bar", "prog_fill", "prog_knob", "vol", "st_play", "st_pause", "st_idle", "search", "anim_a", "anim_b"}
-check(themes.theme_ids() == ["blue", "girly", "yaru", "amoled-blue", "amoled-pink", "violet"], "six themes with the documented IDs")
+check(themes.theme_ids() == ["blue", "girly", "yaru", "amoled-blue", "amoled-pink", "violet", "amoled-orange", "kali"], "eight themes with the documented IDs")
+check(themes.DEFAULT_THEME == "amoled-blue", "AMOLED blue is the out-of-box theme")
 check(all(req <= set(t) for t in themes.THEMES.values()), "every theme defines every colour role")
 check(all(all(len(v) == 6 and int(v, 16) >= 0 for k, v in t.items() if k not in ("id", "name", "desc")) for t in themes.THEMES.values()), "all colour values are valid 6-digit hex")
-check(themes.THEMES["amoled-blue"]["bg"] == "000000" and themes.THEMES["amoled-pink"]["bg"] == "000000", "AMOLED themes use pure black #000000 backgrounds")
+check(all(themes.THEMES[t]["bg"] == "000000" for t in ("amoled-blue", "amoled-pink", "amoled-orange", "kali")), "AMOLED and Kali themes use pure black #000000 backgrounds")
+check(themes.THEMES["amoled-orange"]["accent"] == "FF861F" and themes.THEMES["kali"]["accent"] == "367BF5", "AMOLED orange and Kali blue accents are registered")
 check(all(themes.THEMES[t]["bg"] != "000000" for t in ("blue", "girly", "yaru", "violet")), "non-AMOLED themes keep tinted surfaces")
-check(themes.get("does-not-exist")["id"] == "blue" and themes.resolve(None) is None, "unknown theme id -> blue fallback")
+check(themes.get("does-not-exist")["id"] == themes.DEFAULT_THEME and themes.resolve(None) is None, "unknown theme id -> AMOLED blue fallback")
+check(themes.resolve("KALI-LINUX") == "kali" and themes.resolve("amoled_amber") == "amoled-orange", "Kali and AMOLED orange aliases resolve")
 check(themes.THEMES["blue"]["accent"] == "3D8BFF" and themes.THEMES["girly"]["accent"] == "FF78B7" and themes.THEMES["yaru"]["accent"] == "E95420" and themes.THEMES["violet"]["accent"] == "8B5CF6", "palettes match the specified accents")
 def dist(a, b): return sum((int(a[i:i+2], 16) - int(b[i:i+2], 16)) ** 2 for i in (0, 2, 4)) ** .5
 check(all(dist(t["accent"], t["bg"]) > 150 and dist(t["text"], t["bg"]) > 300 for t in themes.THEMES.values()), "accent/text contrast against background is sufficient in all themes")

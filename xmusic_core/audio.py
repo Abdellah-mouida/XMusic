@@ -8,6 +8,7 @@ un-primed generator.  Here one long-lived generator (_pcm) is primed once, and
 tracks are swapped by replacing an immutable-ish _Stream object (no locks, no
 closing generators from another thread).
 """
+import math
 import sys
 import time
 import types
@@ -23,6 +24,8 @@ except ImportError:                    # pure-Python fallback below is always av
 
 SR, CH, BPF = 44100, 2, 4          # sample-rate, channels, bytes per frame (S16 stereo)
 _MAX_SEND = 8192                   # miniaudio's stream buffer is 16384 frames
+_LIMITER_CEILING = 30000            # keep decoded S16 peaks below digital full scale
+_LIMITER_RELEASE = 0.15             # seconds; fast attack, smooth gain recovery
 
 
 def backend_names() -> tuple:
@@ -67,6 +70,7 @@ class Engine:
         self.volume = 70
         self.muted = False
         self._gain = 256
+        self._limiter_gain = 1.0
         self.set_volume(70)
         self.paused = False
         self.error = None
@@ -87,7 +91,7 @@ class Engine:
         else:
             backends = [getattr(B, n) for n in backend_names() if hasattr(B, n)]
         self.device = ma.PlaybackDevice(output_format=ma.SampleFormat.SIGNED16, nchannels=CH,
-                                        sample_rate=SR, buffersize_msec=120, backends=backends)
+                                        sample_rate=SR, buffersize_msec=180, backends=backends)
         self.backend = self.device.backend
         # The device is started lazily by play(): _start_device() primes a fresh generator
         # (first send() must be None) and starts it; idle_check() releases it again when silent.
@@ -149,13 +153,35 @@ class Engine:
         return out
 
     def _scale(self, chunk):
-        """Apply volume to an array('h') chunk, returning bytes."""
-        g = self._gain
-        if g >= 256:
+        """Apply user volume and a peak limiter to an array('h') PCM chunk.
+
+        The limiter attacks immediately when a decoded chunk approaches full scale,
+        then releases smoothly over ~150 ms. It prevents hot transients from
+        clipping the output while leaving ordinary material untouched.
+        """
+        if not chunk:
+            return b""
+        volume_gain = self._gain / 256.0
+        if volume_gain <= 0:
+            return bytes(len(chunk) * 2)
+
+        peak = max(abs(sample) for sample in chunk)
+        scaled_peak = peak * volume_gain
+        target = min(1.0, _LIMITER_CEILING / scaled_peak) if scaled_peak else 1.0
+        if target < self._limiter_gain:
+            self._limiter_gain = target
+        else:
+            duration = (len(chunk) / CH) / SR
+            release = 1.0 - math.exp(-duration / _LIMITER_RELEASE)
+            self._limiter_gain += (1.0 - self._limiter_gain) * release
+
+        gain = volume_gain * self._limiter_gain
+        if gain >= 0.999999:
             return chunk.tobytes()
+        raw = chunk.tobytes()
         if _audioop is not None:
-            return _audioop.mul(chunk.tobytes(), 2, g / 256.0)
-        return array("h", [(s * g) >> 8 for s in chunk]).tobytes()
+            return _audioop.mul(raw, 2, gain)
+        return array("h", [int(sample * gain) for sample in chunk]).tobytes()
 
     # -------------------------------------------------- device power management
     def _start_device(self):
@@ -202,9 +228,11 @@ class Engine:
         if not len(first):
             raise ValueError("no audio data")
         self.error = None
-        self._start_device()
         self.paused = paused
+        # Publish the prepared stream before starting the callback thread.
+        # This avoids an intermittent silent callback during a cold device start.
         self._cur = _Stream(src, sf / SR, self._scale(first))
+        self._start_device()
         self._quiet = None
 
     def stop(self):

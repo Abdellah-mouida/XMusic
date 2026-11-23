@@ -106,7 +106,7 @@ class Renderer:
 
     # ---------------------------------------------------------------- brand
     def logo_lines(self, tier: str, bg: str) -> list[Line]:
-        cols = logo.rows(tier)
+        cols = logo.rows(tier, kali=self.theme["id"] == "kali")
         pw = len(cols[0])
         edge = None
         if self.intro:
@@ -131,9 +131,13 @@ class Renderer:
 
     def wordmark(self, L, bg, mark="╳ "):
         t = time.monotonic() - self.t0
-        L.add(mark, self.c("brand_b"), bg, True)
-        for i, ch in enumerate("XMusic"):
-            col = Style.lerp(self.c("brand_a"), self.c("brand_b"), i / 5)
+        if self.theme["id"] == "kali":
+            L.add("KALI // ", self.c("brand_b"), bg, True)
+        else:
+            L.add(mark, self.c("brand_b"), bg, True)
+        label = "XMUSIC"
+        for i, ch in enumerate(label):
+            col = Style.lerp(self.c("brand_a"), self.c("brand_b"), i / max(1, len(label) - 1))
             if self.intro:
                 p = t * 9 - i * 0.9
                 if p <= 0:
@@ -148,10 +152,10 @@ class Renderer:
             return "NO AUDIO DEVICE", self.c("err"), self.c("err")
         if e.playing:
             pulse = self.animate and int(time.monotonic() * 2) % 2
-            return "PLAYING", self.c("st_play"), (self.c("bright") if pulse else self.c("accent"))
+            return "STREAMING", self.c("st_play"), (self.c("bright") if pulse else self.c("accent"))
         if e.active and e.paused:
             return "PAUSED", self.c("st_pause"), self.c("st_pause")
-        return "AUDIO READY", self.c("st_idle"), self.c("st_idle")
+        return "NODE READY", self.c("st_idle"), self.c("st_idle")
 
     def status_chunk(self, bg) -> Line:
         st, stc, dot = self.status()
@@ -175,8 +179,9 @@ class Renderer:
         return out
 
     def header(self, label, w, bg, focus=False):
-        L = Line().add(label, self.c("bright") if focus else self.c("accent"), bg, True)
-        L.add(" " + "─" * max(0, w - cw(label) - 1), self.c("border"), bg)
+        L = Line().add("› ", self.c("hl"), bg, True)
+        L.add(label, self.c("bright") if focus else self.c("accent"), bg, True)
+        L.add(" " + "─" * max(0, w - L.w - 1), self.c("border"), bg)
         return L
 
     # ---------------------------------------------------------------- controls
@@ -240,11 +245,11 @@ class Renderer:
 
     def now_lines(self, w, bg, rows_n):
         e, t = self.engine, self.cur
-        rows = [(self.header("NOW PLAYING", w, bg), False)]
+        rows = [(self.header("SIGNAL MONITOR", w, bg), False)]
         L = Line()
         for ch, col in self.eq(6):
             L.add(ch, col, bg)
-        L.add("  " + ("PLAYING" if e.playing else "PAUSED" if (e.active and e.paused) else "STOPPED"),
+        L.add("  " + ("STREAM LIVE" if e.playing else "PAUSED" if (e.active and e.paused) else "IDLE"),
               self.c("st_play") if e.playing else self.c("st_pause"), bg, True)
         rows.append((L, False))
         if t:
@@ -470,8 +475,8 @@ class Renderer:
         if tier == "small":
             L = Line().add(" ", None, BG)
             self.wordmark(L, BG, "╲╱ ")
-            tag = "TERMINAL MUSIC PLAYER"
-            L.add(" " * (W - 3 - L.w - cw(tag)), None, BG).add(tag, self.c("text2"), BG)
+            tag = "HACKER AUDIO TERMINAL"
+            L.add(" " * max(1, W - 3 - L.w - cw(tag)), None, BG).add(tag, self.c("text2"), BG)
             box(L)
             L = Line().add(" ", None, BG).add("╱╲ ", self.c("brand_b"), BG, True).add("LOCAL AUDIO", self.c("muted"), BG)
             sc = self.status_chunk(BG)
@@ -480,7 +485,8 @@ class Renderer:
         else:
             for ln in self.logo_lines(tier, BG):
                 box(ln)
-            L = Line().add("  TERMINAL MUSIC PLAYER", self.c("text2"), BG).add("  •  ", self.c("muted"), BG).add("LOCAL AUDIO", self.c("muted"), BG)
+            tagline = "  // LOCAL AUDIO NODE  ·  NO CLOUD"
+            L = Line().add(tagline, self.c("text2"), BG)
             sc = self.status_chunk(BG)
             L.add(" " * max(1, W - 4 - L.w - sc.w), None, BG).extend(sc)
             box(L)
@@ -490,7 +496,7 @@ class Renderer:
         Lw = max(36, int((W - 7) * 0.52))
         Rw = W - 7 - Lw
         self.list_y0 = top_rows + 7
-        left = [self.header("LIBRARY", Lw, BG, self.focus == "nav")] + self.nav_items(Lw, BG)
+        left = [self.header("TRACK ARCHIVE", Lw, BG, self.focus == "nav")] + self.nav_items(Lw, BG)
         left += self.list_lines(Lw, body - 6, BG)
         right = self.now_lines(Rw, BG, body)
         for i in range(body):
