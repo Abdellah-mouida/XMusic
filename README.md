@@ -52,18 +52,19 @@ is retained from the earlier six-theme build and has not yet been regenerated.
 
 Aliases accepted: `rose`/`pink` -> girly, `orange`/`ubuntu` -> yaru, `amoled` -> amoled-blue,
 `amoled-amber` -> amoled-orange, `kali-linux` -> kali, and `purple` -> violet. AMOLED Blue is the default.
-The dedicated `--kali` launch mode uses the supplied dragon mark at its original 17-row size, with a playback
-sidecar and a full-width track archive underneath. The Kali palette can also be selected with `--theme kali`
-without switching away from the normal XMusic layout. The theme is community-inspired and is not affiliated
-with or endorsed by Offensive Security.
+The dedicated `--kali` launch mode places the supplied 17-row dragon beside the original XMusic block logo
+in a top strip reserved only for the two marks. The lower deck is divided into separate player/control and
+playlist/archive panes. Both logos keep their original dimensions and use the Kali blue-to-cyan palette. The
+Kali palette can also be selected with `--theme kali` without switching away from the normal XMusic layout.
+The theme is community-inspired and is not affiliated with or endorsed by Offensive Security.
 
 Press `t` to open the picker: move with the arrow keys to **preview live**, `Enter` to apply and save, `Esc` to
 cancel (the previous theme returns). With the mouse: click a theme to preview, click again to apply. An unknown
 saved theme silently falls back to `amoled-blue`.
 
-Kali layout needs at least 45 terminal columns and 24 rows to preserve the supplied dragon at native size.
-Wide terminals place the dragon beside the signal monitor; narrower supported terminals center the dragon
-above the navigation and archive. `--theme kali` alone keeps the regular XMusic layout and wordmark.
+The combined logo header needs at least 95 terminal columns and 24 rows. The lower half is split between the
+player controls and the playlist/archive; taller terminals reveal more tracks and the full shortcut footer.
+`--theme kali` alone keeps the regular XMusic layout and wordmark.
 
 ![Theme picker](docs/screenshots/theme-picker.png)
 
