@@ -30,7 +30,7 @@ server or telemetry.
 | **Playlists** | create, rename, delete (with confirmation), add/remove tracks, play; stored as readable JSON |
 | **Library** | recursive scan, folder browser, search (title/artist/album/filename), sort, recently played, thousands of tracks |
 | **Themes** | eight dark palettes, AMOLED blue default, live preview, saved between runs, `--theme` flag, `NO_COLOR` respected |
-| **Kali console** | `xmusic --kali` launches the full-size 17-row dragon layout with playback sidecar and archive below |
+| **Kali console** | `xmusic --kali` shows the full-size Kali dragon + XMusic logo above split player and playlist panes |
 | **Mouse** | click, double-click, wheel, drag progress/volume bars, clickable buttons, dialogs and shortcut hints |
 | **Animations** | logo reveal, equalizer, track-change highlight - all optional (`--no-animation`) |
 

@@ -123,6 +123,8 @@ check(len(dragon) == 17 and logo.kali_width() == 41 and logo.height("big", kali=
       "Kali dragon keeps its original 17-row, 41-column native size")
 check(dragon_rows == [line.ljust(logo.kali_width(), "⠀") for line in dragon],
       "Kali terminal rows preserve every original glyph and left-side blank")
+check(len(logo.XMUSIC_ART) == 6 and max(map(len, logo.XMUSIC_ART)) == 47,
+      "XMusic block wordmark remains available at its original 6-row, 47-column size for Kali branding")
 
 # ---------------------------------------------------------------- themes
 req = {"bg", "panel", "border", "accent", "bright", "hl", "text", "text2", "muted", "rem", "ok", "warn", "err", "brand_a", "brand_b",

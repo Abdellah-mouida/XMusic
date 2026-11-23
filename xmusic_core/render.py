@@ -530,10 +530,25 @@ class Renderer:
         out.add(" " * max(0, slot_w - out.w), None, bg)
         return out
 
+    def xmusic_banner_row(self, art_line: str, slot_w: int, bg: str) -> Line:
+        """Render one original XMusic block-logo row with Kali's blue-to-cyan accent."""
+        width = max(map(len, logo.XMUSIC_ART))
+        line = art_line.ljust(width)
+        left = max(0, (slot_w - width) // 2)
+        out = Line().add(" " * left, None, bg)
+        for x, ch in enumerate(line):
+            if ch == " ":
+                out.add(ch, None, bg)
+            else:
+                col = Style.lerp(self.c("brand_a"), self.c("brand_b"), x / max(1, width - 1))
+                out.add(ch, col, bg, True)
+        out.add(" " * max(0, slot_w - out.w), None, bg)
+        return out
+
     def kali_nav_line(self, W: int, bg: str) -> Line:
-        """Wide clickable navigation strip used below the standalone dragon."""
-        L = Line().add("  KALI // ", self.c("brand_b"), bg, True)
-        names = ("ALL", "DIRECTORIES", "QUEUE", "PLAYLISTS", "RECENT")
+        """Clickable library navigation for the playlist pane."""
+        L = Line()
+        names = ("ALL", "DIRS", "QUEUE", "LISTS", "RECENT")
         for i, name in enumerate(names):
             active = i == self.nav and not self.query
             fl = self.flashing("tab", i)
@@ -541,59 +556,112 @@ class Renderer:
             fill = self.c("accent") if fl else self.c("panel") if active else bg
             L.add(" " + name + " ", fg, fill, active or fl, hit=("tab", i))
             L.add(" ", None, bg)
-        L.add("  ·  ", self.c("muted"), bg)
-        L.add("%d TRACKS" % len(self.tracks), self.c("muted"), bg)
         return L.fill(W, bg)
 
+    def kali_player_lines(self, W: int, bg: str, rows_n: int) -> list[Line]:
+        """Compact, fully interactive player pane used by the dedicated Kali layout."""
+        e, t = self.engine, self.cur
+        rows = [self.header("PLAYER", W, bg)]
+        title = t.title if t else "Nothing playing"
+        artist = (t.artist or "Unknown artist") if t else ("Press Enter on a track to start" if self.tracks else "No audio in library")
+        rows.append(Line().add(fit(title, W), self.c("text") if t else self.c("text2"), bg, bool(t)))
+        rows.append(Line().add(fit(artist, W), self.c("muted"), bg))
+
+        pos, dur, fr = self.progress_values()
+        a, b = fmt_time(pos), (fmt_time(dur) if dur else "--:--")
+        bar_w = max(6, W - cw(a) - cw(b) - 2)
+        progress = Line().add(a + " ", self.c("text"), bg)
+        self.bar(progress, bar_w, fr, bg, "bar")
+        progress.add(" " + b, self.c("text2"), bg)
+        rows.append(progress.fill(W, bg))
+
+        controls = Line()
+        self.btn(controls, "Prev", ("btn", "prev"), bg)
+        controls.add(" ", None, bg)
+        self.btn(controls, "Pause" if e.playing else "Play", ("btn", "play"), bg)
+        controls.add(" ", None, bg)
+        self.btn(controls, "Next", ("btn", "next"), bg)
+        controls.add("  ", None, bg)
+        self.mode_buttons(controls, bg, short=True)
+        if controls.w > W:
+            controls = Line()
+            self.btn(controls, "Prev", ("btn", "prev"), bg)
+            controls.add(" ", None, bg)
+            self.btn(controls, "Pause" if e.playing else "Play", ("btn", "play"), bg)
+            controls.add(" ", None, bg)
+            self.btn(controls, "Next", ("btn", "next"), bg)
+        rows.append(controls.fill(W, bg))
+        rows.append(self.vol_line(W, bg).fill(W, bg))
+
+        if rows_n > 6:
+            album = ((t.album + " · ") if t and t.album else "") + (os.path.basename(t.path) if t else "")
+            if album:
+                rows.append(Line().add(fit(album, W), self.c("muted"), bg))
+        if rows_n > 7:
+            status, status_col, dot = self.status()
+            L = Line().add("● ", dot, bg).add(status, status_col, bg, True)
+            if e.muted:
+                L.add("  ·  MUTED", self.c("warn"), bg, True)
+            elif e.volume < 100:
+                L.add("  ·  VOL %d%%" % e.volume, self.c("text2"), bg)
+            rows.append(L)
+        return [line.fill(W, bg) for line in rows[:rows_n]] + [Line().fill(W, bg) for _ in range(max(0, rows_n - len(rows)))]
+
     def frame_kali(self, W: int, H: int) -> list[Line]:
-        """Dedicated native-size Kali console: dragon + playback sidecar + full-width library."""
+        """Logo-only Kali header above side-by-side player and playlist panes."""
         BG, B = self.c("bg"), self.c("border")
-        art = logo.kali_lines()
-        art_w = logo.kali_width()
+        art, xart = logo.kali_lines(), logo.XMUSIC_ART
+        art_w, xart_w = logo.kali_width(), max(map(len, xart))
+        min_w = 2 + art_w + 3 + xart_w + 2
         rows: list[Line] = []
 
-        if W < art_w + 4 or H < 24:
-            message = ("KALI MODE NEEDS %d COLUMNS" % (art_w + 4) if W < art_w + 4
+        if W < min_w or H < 24:
+            message = ("KALI + XMUSIC LOGOS NEED %d COLUMNS" % min_w if W < min_w
                        else "KALI MODE NEEDS AT LEAST 24 ROWS")
             rows.append(Line().add("  " + message, self.c("warn"), BG, True).fill(W, BG))
-            rows.append(Line().add("  Resize the terminal to keep the original dragon size.", self.c("text2"), BG).fill(W, BG))
-            rows.append(Line().add("  No logo scaling or cropping is used in Kali mode.", self.c("muted"), BG).fill(W, BG))
+            rows.append(Line().add("  Widen or heighten the terminal; both logos stay at native size.", self.c("text2"), BG).fill(W, BG))
+            rows.append(Line().add("  The lower deck uses separate player and playlist panes.", self.c("muted"), BG).fill(W, BG))
             return rows
 
-        # On a normal 80-column terminal, the 41-column dragon gets its own
-        # left-hand stage. The signal monitor moves into the right-hand rail.
-        if W >= 76:
-            logo_slot = art_w + 2
-            right_w = W - logo_slot - 3
-            monitor = self.now_lines(right_w, BG, len(art))
-            for i, line in enumerate(art):
-                L = Line()
-                L.extend(self.kali_banner_row(line, logo_slot, BG))
-                L.add(" │ ", B, BG)
-                if i < len(monitor):
-                    L.extend(monitor[i])
-                rows.append(L.fill(W, BG))
-        else:
-            # Narrower terminals keep the mark centered at its exact size;
-            # the compact status strip replaces the unavailable side rail.
-            for line in art:
-                rows.append(self.kali_banner_row(line, W, BG))
-            L = Line().add("  KALI AUDIO NODE  //  ", self.c("brand_b"), BG, True)
-            L.add(self.status()[0], self.status()[1], BG, True)
-            if self.cur:
-                L.add("  ·  " + fit(self.cur.title, max(1, W - L.w - 4)), self.c("text"), BG)
-            rows.append(L.fill(W, BG))
+        # Top strip is intentionally logo-only: the full-size Kali dragon and
+        # the original XMusic block wordmark sit side by side in Kali colours.
+        x_offset = max(0, (len(art) - len(xart)) // 2)
+        for i, line in enumerate(art):
+            L = Line().add("  ", None, BG)
+            L.extend(self.kali_banner_row(line, art_w, BG))
+            L.add("   ", None, BG)
+            xi = i - x_offset
+            if 0 <= xi < len(xart):
+                L.extend(self.xmusic_banner_row(xart[xi], xart_w, BG))
+            else:
+                L.add(" " * xart_w, None, BG)
+            rows.append(L.add("  ", None, BG).fill(W, BG))
 
-        # Navigation and the archive now sit beneath the large standalone mark.
         rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
-        rows.append(self.kali_nav_line(W, BG))
-        self.list_y0 = len(rows) + 1
-        tall = H >= 29
-        footer_rows = 2 if tall else 1
-        closing_rows = 2 if tall else 0
-        visible = max(1, H - len(rows) - footer_rows - closing_rows)
-        for ln in self.list_lines(W - 4, visible, BG):
-            rows.append(Line().add("  ", None, BG).extend(ln).fill(W, BG))
+
+        # Split the lower deck into a narrower player/control pane and a
+        # wider playlist/archive pane. Extra terminal height expands the list.
+        tall, footer = H >= 30, 27 <= H < 30
+        footer_rows = 4 if tall else 1 if footer else 0
+        body_rows = H - len(rows) - footer_rows
+        inner_w = W - 7
+        player_w = max(36, int(inner_w * 0.42))
+        playlist_w = inner_w - player_w
+
+        player = self.kali_player_lines(player_w, BG, body_rows)
+        playlist = [
+            self.header("PLAYLIST / ARCHIVE", playlist_w, BG, self.focus == "list"),
+            self.kali_nav_line(playlist_w, BG),
+        ]
+        self.list_y0 = len(rows) + len(playlist) + 1
+        playlist.extend(self.list_lines(playlist_w, max(1, body_rows - 2), BG))
+
+        for i in range(body_rows):
+            left = player[i] if i < len(player) else Line()
+            right = playlist[i] if i < len(playlist) else Line()
+            L = (Line().add("  ", None, BG).extend(left.fill(player_w, BG))
+                 .add(" │ ", B, BG).extend(right.fill(playlist_w, BG)).add("  ", None, BG))
+            rows.append(L.fill(W, BG))
 
         if tall:
             rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
@@ -601,7 +669,7 @@ class Renderer:
             rows.append(Line().add("  ", None, BG).extend(f1).fill(W, BG))
             rows.append(Line().add("  ", None, BG).extend(f2).fill(W, BG))
             rows.append(Line().add("╰" + "─" * max(0, W - 2) + "╯", B, BG))
-        else:
+        elif footer:
             f1, f2 = self.footer_lines(W - 2, BG)
             rows.append(Line().add(" ", None, BG).extend(f1 if self.toast[0] else f2).fill(W, BG))
         return rows
