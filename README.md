@@ -70,10 +70,10 @@ The Kali console gets its own composition rather than merely recolouring the sta
 - **Blue Matrix rain:** animated blue characters flow behind the logos, leaving the lettering crisp.
 - **Colour motion:** a blue-to-cyan wave moves across both marks.
 - **Split lower deck:** a dedicated **PLAYER** pane beside the **PLAYLIST / ARCHIVE** pane.
-- **Preserved artwork:** the original XMusic glyphs are repeated evenly in both directions — no redraw, distortion, or cropping.
+- **Adaptive artwork:** the original XMusic glyphs are scaled proportionally to the available space; the full 3× mark returns when the terminal is large enough.
 
 <blockquote>
-  <strong>Terminal size:</strong> the full dual-logo header requires at least <code>216 columns × 26 rows</code>. Increase the terminal size to see the complete layout.
+  <strong>Responsive layout:</strong> there is no minimum terminal size. XMusic automatically scales the marks down and stacks them when the terminal is narrow or short, then restores the full side-by-side design when space is available.
 </blockquote>
 
 Animations are enabled by default. Press <code>z</code> to toggle them during a session, or launch with <code>--no-animation</code> to disable the intro, Matrix effect, equalizer, and other motion.

@@ -87,13 +87,15 @@ class Renderer:
     def render(self):
         W, H = self.term.size
         self.hits = []
-        if W < 30 or H < 9:
-            rows = [Line().add(fit(t, W), self.c("err"), self.c("bg")).fill(W, self.c("bg")) for t in ("Terminal too small", "need at least 30x9")]
-            self.mode = "tiny"
+        if W <= 0 or H <= 0:
+            return
+        if self.kali_mode:
+            rows, self.mode = self.frame_kali(W, H), "kali"
+        elif W < 30 or H < 9:
+            rows = self.frame_compact(W, H)
+            self.mode = "compact"
         elif self.help:
             rows, self.mode = self.frame_help(W, H), "help"
-        elif self.kali_mode:
-            rows, self.mode = self.frame_kali(W, H), "kali"
         elif W >= 76 and H >= 18:
             rows, self.mode = self.frame_full(W, H), "full"
         else:
@@ -551,15 +553,11 @@ class Renderer:
             blend = p
         return Style.lerp(self.c("brand_a"), self.c("brand_b"), blend)
 
-    def kali_header_row(self, W: int, row_i: int, bg: str, frame: int, header_h: int) -> Line:
-        """Compose blue Matrix rain behind the dragon and proportionally enlarged XMusic art."""
+    def kali_header_row(self, W: int, row_i: int, bg: str, frame: int, header_h: int, placements) -> Line:
+        """Compose responsive logo art over blue Matrix rain."""
         chars = [" "] * W
         colors = [None] * W
         bold = [False] * W
-        dragon = logo.kali_lines()
-        xart = logo.xmusic_lines()
-
-        # Matrix rain uses blue shades and remains behind the logo glyphs.
         if self.animate:
             for x in range(W):
                 cell = matrix_glyph(x, row_i, frame, header_h)
@@ -568,38 +566,25 @@ class Renderer:
                     colors[x] = MATRIX_COLORS[level]
                     bold[x] = level == 0
 
-        dragon_w = logo.kali_width()
-        xmusic_w = max(map(len, xart))
-        dragon_x = 2
-        xmusic_x = dragon_x + dragon_w + 3
-        dragon_top = (header_h - len(dragon)) // 2
-        dragon_row = row_i - dragon_top
+        for kind, art, x0, y0, art_w in placements:
+            if kind == "author":
+                label = fit(AUTHOR_LINE, max(1, art_w))
+                x0 += max(0, (art_w - cw(label)) // 2)
+                for x, ch in enumerate(label):
+                    pos = x0 + x
+                    if 0 <= pos < W:
+                        chars[pos], colors[pos], bold[pos] = ch, self.c("text2"), False
+                continue
 
-        if 0 <= dragon_row < len(dragon):
-            for x, ch in enumerate(dragon[dragon_row]):
-                if ch not in ("⠀", " "):
-                    pos = dragon_x + x
-                    if pos < W:
+            for sy, line in enumerate(art):
+                if y0 + sy != row_i:
+                    continue
+                for x, ch in enumerate(line):
+                    pos = x0 + x
+                    if 0 <= pos < W and ch != " ":
                         chars[pos] = ch
-                        colors[pos] = self.kali_logo_color(x, dragon_w)
+                        colors[pos] = self.kali_logo_color(x, max(1, art_w))
                         bold[pos] = True
-
-        if 0 <= row_i < len(xart):
-            for x, ch in enumerate(xart[row_i]):
-                if ch != " ":
-                    pos = xmusic_x + x
-                    if pos < W:
-                        chars[pos] = ch
-                        colors[pos] = self.kali_logo_color(x, xmusic_w)
-                        bold[pos] = True
-        elif row_i == len(xart):
-            left = xmusic_x + max(0, (xmusic_w - cw(AUTHOR_LINE)) // 2)
-            for x, ch in enumerate(AUTHOR_LINE):
-                pos = left + x
-                if pos < W:
-                    chars[pos] = ch
-                    colors[pos] = self.c("text2")
-                    bold[pos] = False
 
         out = Line()
         start = 0
@@ -610,199 +595,278 @@ class Renderer:
         return out.fill(W, bg)
 
     def kali_nav_line(self, W: int, bg: str) -> Line:
-        """Clickable library navigation for the playlist pane."""
+        """Clickable navigation tabs that shorten when the pane gets narrow."""
+        names = ("ALL", "DIRECTORIES", "QUEUE", "PLAYLISTS", "RECENT") if W >= 48 else ("A", "DIR", "Q", "PL", "R")
         L = Line()
-        names = ("ALL", "DIRS", "QUEUE", "LISTS", "RECENT")
         for i, name in enumerate(names):
+            label = " " + name + " "
+            if L.w + cw(label) > W:
+                continue
             active = i == self.nav and not self.query
             fl = self.flashing("tab", i)
             fg = bg if fl else self.c("bright") if active else self.c("text2")
             fill = self.c("accent") if fl else self.c("panel") if active else bg
-            L.add(" " + name + " ", fg, fill, active or fl, hit=("tab", i))
-            L.add(" ", None, bg)
+            L.add(label, fg, fill, active or fl, hit=("tab", i))
         return L.fill(W, bg)
 
     def kali_player_lines(self, W: int, bg: str, rows_n: int) -> list[Line]:
-        """Compact, fully interactive player pane used by the dedicated Kali layout."""
+        """Player details compact progressively to fit the pane."""
+        if rows_n <= 0 or W <= 0:
+            return []
         e, t = self.engine, self.cur
-        rows = [self.header("PLAYER", W, bg)]
         title = t.title if t else "Nothing playing"
-        artist = (t.artist or "Unknown artist") if t else ("Press Enter on a track to start" if self.tracks else "No audio in library")
-        rows.append(Line().add(fit(title, W), self.c("text") if t else self.c("text2"), bg, bool(t)))
-        rows.append(Line().add(fit(artist, W), self.c("muted"), bg))
-
-        pos, dur, fr = self.progress_values()
-        a, b = fmt_time(pos), (fmt_time(dur) if dur else "--:--")
-        bar_w = max(6, W - cw(a) - cw(b) - 2)
-        progress = Line().add(a + " ", self.c("text"), bg)
-        self.bar(progress, bar_w, fr, bg, "bar")
-        progress.add(" " + b, self.c("text2"), bg)
-        rows.append(progress.fill(W, bg))
-
-        controls = Line()
-        self.btn(controls, "Prev", ("btn", "prev"), bg)
-        controls.add(" ", None, bg)
-        self.btn(controls, "Pause" if e.playing else "Play", ("btn", "play"), bg)
-        controls.add(" ", None, bg)
-        self.btn(controls, "Next", ("btn", "next"), bg)
-        controls.add("  ", None, bg)
-        self.mode_buttons(controls, bg, short=True)
-        if controls.w > W:
+        artist = (t.artist or "Unknown artist") if t else ("Press Enter to start" if self.tracks else "No audio")
+        rows = []
+        rows.append(self.header("PLAYER", W, bg) if W >= 12 else
+                    Line().add(fit("PLAYER", W), self.c("accent"), bg, True))
+        if len(rows) < rows_n:
+            rows.append(Line().add(fit(title, W), self.c("text") if t else self.c("text2"), bg, bool(t)))
+        if len(rows) < rows_n and W >= 24:
+            rows.append(Line().add(fit(artist, W), self.c("muted"), bg))
+        if len(rows) < rows_n and W >= 14:
+            pos, dur, fr = self.progress_values()
+            a, b = fmt_time(pos), (fmt_time(dur) if dur else "--:--")
+            progress = Line().add(a + " ", self.c("text"), bg)
+            self.bar(progress, max(1, W - cw(a) - cw(b) - 2), fr, bg, "bar")
+            progress.add(" " + b, self.c("text2"), bg)
+            rows.append(progress.fill(W, bg))
+        if len(rows) < rows_n:
             controls = Line()
-            self.btn(controls, "Prev", ("btn", "prev"), bg)
-            controls.add(" ", None, bg)
-            self.btn(controls, "Pause" if e.playing else "Play", ("btn", "play"), bg)
-            controls.add(" ", None, bg)
-            self.btn(controls, "Next", ("btn", "next"), bg)
-        rows.append(controls.fill(W, bg))
-        rows.append(self.vol_line(W, bg).fill(W, bg))
+            if W >= 20:
+                self.btn(controls, "Prev", ("btn", "prev"), bg)
+                controls.add(" ", None, bg)
+                self.btn(controls, "Pause" if e.playing else "Play", ("btn", "play"), bg)
+                controls.add(" ", None, bg)
+                self.btn(controls, "Next", ("btn", "next"), bg)
+            elif W >= 9:
+                self.btn(controls, "P", ("btn", "prev"), bg)
+                self.btn(controls, "▶" if e.playing else ">", ("btn", "play"), bg)
+                self.btn(controls, "N", ("btn", "next"), bg)
+            else:
+                controls.add(fit("▶" if e.playing else "Ⅱ", W), self.c("accent"), bg)
+            rows.append(controls.fill(W, bg))
+        if len(rows) < rows_n and W >= 20:
+            rows.append(self.vol_line(W, bg, label=False).fill(W, bg))
+        status, status_col, dot = self.status()
+        if len(rows) < rows_n and W >= 12:
+            rows.append(Line().add("● ", dot, bg).add(fit(status, max(1, W - 2)), status_col, bg, True).fill(W, bg))
+        return rows[:rows_n]
 
-        if rows_n > 6:
-            album = ((t.album + " · ") if t and t.album else "") + (os.path.basename(t.path) if t else "")
-            if album:
-                rows.append(Line().add(fit(album, W), self.c("muted"), bg))
-        if rows_n > 7:
-            status, status_col, dot = self.status()
-            L = Line().add("● ", dot, bg).add(status, status_col, bg, True)
-            if e.muted:
-                L.add("  ·  MUTED", self.c("warn"), bg, True)
-            elif e.volume < 100:
-                L.add("  ·  VOL %d%%" % e.volume, self.c("text2"), bg)
-            rows.append(L)
-        return [line.fill(W, bg) for line in rows[:rows_n]] + [Line().fill(W, bg) for _ in range(max(0, rows_n - len(rows)))]
+    def kali_list_lines(self, W: int, rows_n: int, bg: str) -> list[Line]:
+        """Library list fallback for narrow terminals."""
+        if rows_n <= 0 or W <= 0:
+            self.list_rows = 1
+            return []
+        if W >= 12:
+            return self.list_lines(W, rows_n, bg)
+        items = self.items()
+        visible = max(0, rows_n - 1)
+        self.list_rows = max(1, visible)
+        self.top = max(0, min(self.top, max(0, len(items) - self.list_rows)))
+        out = [Line().add(fit("LIB %d" % len(items), W), self.c("accent"), bg, True)]
+        for off in range(visible):
+            idx = self.top + off
+            if idx >= len(items):
+                out.append(Line().fill(W, bg))
+                continue
+            kind, value = items[idx]
+            label = value.title if kind == "track" else value.track.title if kind == "q" else self.row_label(kind, value)
+            line = Line().add(fit(label, W), self.c("text") if idx == self.sel else self.c("text2"), bg, idx == self.sel)
+            line.hits.append((0, W, "row", off))
+            out.append(line)
+        return out[:rows_n]
 
     def frame_kali(self, W: int, H: int) -> list[Line]:
-        """Logo-only Kali header above side-by-side player and playlist panes."""
+        """Kali layout adapts continuously; no terminal-size minimum is imposed."""
         BG, B = self.c("bg"), self.c("border")
-        art = logo.kali_lines()
-        xart = logo.xmusic_lines()
-        art_w, xart_w = logo.kali_width(), max(map(len, xart))
-        header_h = max(len(art), len(xart) + 1)
-        min_w, min_h = 2 + art_w + 3 + xart_w + 2, header_h + 7
+        if W <= 0 or H <= 0:
+            return []
         rows: list[Line] = []
 
-        if W < min_w or H < min_h:
-            message = ("KALI + XMUSIC LOGOS NEED %d COLUMNS" % min_w if W < min_w
-                       else "KALI MODE NEEDS AT LEAST %d ROWS" % min_h)
-            rows.append(Line().add("  " + message, self.c("warn"), BG, True).fill(W, BG))
-            rows.append(Line().add("  Widen or heighten the terminal; both logos stay at native size.", self.c("text2"), BG).fill(W, BG))
-            rows.append(Line().add("  The lower deck uses separate player and playlist panes.", self.c("muted"), BG).fill(W, BG))
-            return rows
+        # For a one- or two-row terminal, preserve usability with a clipped
+        # identity/player strip rather than refusing to render.
+        if H <= 2:
+            label = "KALI / XMUSIC" if W > 4 else "X"
+            rows.append(Line().add(fit(label, W), self.c("brand_b"), BG, True).fill(W, BG))
+            if H == 2:
+                rows.append(Line().add(fit("▶ " + (self.cur.title if self.cur else "READY"), W), self.c("text2"), BG).fill(W, BG))
+            return rows[:H]
 
-        # The top strip stays logo-only. Matrix rain moves behind the dragon and
-        # XMusic wordmark; a byline sits directly beneath the XMusic mark.
+        inner_w = max(1, W - 4)
+        header_budget = max(1, min(18, H - 3))
+        dragon_source, xmusic_source = logo.kali_lines(), logo.xmusic_lines()
+        placements = []
+        if W >= 60:
+            # Wide composition. The original full-size pair returns when the
+            # available dimensions permit it; otherwise each logo scales down.
+            dragon_slot = min(logo.kali_width(), max(1, int(inner_w * 0.38)))
+            gap = min(3, max(0, inner_w - dragon_slot - 1))
+            xmusic_slot = max(1, inner_w - dragon_slot - gap)
+            dragon_lines = logo.fit_lines(dragon_source, dragon_slot, header_budget)
+            show_author = header_budget >= 5
+            xmusic_lines = logo.fit_lines(xmusic_source, xmusic_slot, max(1, header_budget - (1 if show_author else 0)))
+            header_h = max(len(dragon_lines), len(xmusic_lines) + (1 if show_author else 0))
+            placements.append(("art", dragon_lines, 2, max(0, (header_h - len(dragon_lines)) // 2), dragon_slot))
+            xmusic_y = max(0, (header_h - len(xmusic_lines) - (1 if show_author else 0)) // 2)
+            placements.append(("art", xmusic_lines, 2 + dragon_slot + gap, xmusic_y, xmusic_slot))
+            if show_author:
+                placements.append(("author", [], 2 + dragon_slot + gap, xmusic_y + len(xmusic_lines), xmusic_slot))
+        else:
+            # Narrow composition. Stack the two scaled marks vertically.
+            show_author = header_budget >= 5
+            art_budget = max(2, header_budget - (1 if show_author else 0))
+            dragon_h = max(1, int(art_budget * 0.58))
+            xmusic_h = max(1, art_budget - dragon_h)
+            dragon_lines = logo.fit_lines(dragon_source, inner_w, dragon_h)
+            xmusic_lines = logo.fit_lines(xmusic_source, inner_w, xmusic_h)
+            header_h = len(dragon_lines) + 1 + len(xmusic_lines) + (1 if show_author else 0)
+            dragon_w = max(map(len, dragon_lines))
+            xmusic_w = max(map(len, xmusic_lines))
+            placements.append(("art", dragon_lines, max(0, (W - dragon_w) // 2), 0, dragon_w))
+            xmusic_y = len(dragon_lines) + 1
+            placements.append(("art", xmusic_lines, max(0, (W - xmusic_w) // 2), xmusic_y, xmusic_w))
+            if show_author:
+                placements.append(("author", [], max(0, (W - xmusic_w) // 2), xmusic_y + len(xmusic_lines), xmusic_w))
+
         frame = int(time.monotonic() * 8) if self.animate else 0
-        for i in range(header_h):
-            rows.append(self.kali_header_row(W, i, BG, frame, header_h))
+        for y in range(header_h):
+            rows.append(self.kali_header_row(W, y, BG, frame, header_h, placements))
 
-        rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
+        body_h = H - len(rows)
+        if body_h <= 0:
+            return rows[:H]
+        if body_h >= 2 and W >= 8:
+            rows.append(Line().add("─" * W, B, BG))
+            body_h -= 1
+        if body_h <= 0:
+            return rows[:H]
 
-        # Split the lower deck into a narrower player/control pane and a
-        # wider playlist/archive pane. Extra terminal height expands the list.
-        tall, footer = H >= 30, 27 <= H < 30
-        footer_rows = 4 if tall else 1 if footer else 0
-        body_rows = H - len(rows) - footer_rows
-        inner_w = W - 7
-        player_w = max(36, int(inner_w * 0.42))
-        playlist_w = inner_w - player_w
-
-        player = self.kali_player_lines(player_w, BG, body_rows)
-        playlist = [
-            self.header("PLAYLIST / ARCHIVE", playlist_w, BG, self.focus == "list"),
-            self.kali_nav_line(playlist_w, BG),
-        ]
-        self.list_y0 = len(rows) + len(playlist) + 1
-        playlist.extend(self.list_lines(playlist_w, max(1, body_rows - 2), BG))
-
-        for i in range(body_rows):
-            left = player[i] if i < len(player) else Line()
-            right = playlist[i] if i < len(playlist) else Line()
-            L = (Line().add("  ", None, BG).extend(left.fill(player_w, BG))
-                 .add(" │ ", B, BG).extend(right.fill(playlist_w, BG)).add("  ", None, BG))
-            rows.append(L.fill(W, BG))
-
-        if tall:
-            rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
-            f1, f2 = self.footer_lines(W - 4, BG)
-            rows.append(Line().add("  ", None, BG).extend(f1).fill(W, BG))
-            rows.append(Line().add("  ", None, BG).extend(f2).fill(W, BG))
-            rows.append(Line().add("╰" + "─" * max(0, W - 2) + "╯", B, BG))
-        elif footer:
-            f1, f2 = self.footer_lines(W - 2, BG)
-            rows.append(Line().add(" ", None, BG).extend(f1 if self.toast[0] else f2).fill(W, BG))
-        return rows
+        if W >= 60 and body_h >= 4:
+            # Two panes while there is enough horizontal room.
+            panel_w = max(1, W - 7)
+            player_w = max(1, int(panel_w * 0.40))
+            playlist_w = max(1, panel_w - player_w)
+            player = self.kali_player_lines(player_w, BG, body_h)
+            playlist = [
+                self.header("PLAYLIST / ARCHIVE", playlist_w, BG, self.focus == "list") if playlist_w >= 12
+                else Line().add(fit("LIBRARY", playlist_w), self.c("accent"), BG, True),
+                self.kali_nav_line(playlist_w, BG),
+            ]
+            self.list_y0 = len(rows) + 2
+            playlist.extend(self.kali_list_lines(playlist_w, max(0, body_h - 2), BG))
+            for i in range(body_h):
+                left = player[i] if i < len(player) else Line()
+                right = playlist[i] if i < len(playlist) else Line()
+                L = Line().add("  ", None, BG).extend(left.fill(player_w, BG))
+                L.add(" │ ", B, BG).extend(right.fill(playlist_w, BG)).add("  ", None, BG)
+                rows.append(L.fill(W, BG))
+        else:
+            # Narrow or short screens stack player, navigation, then library.
+            player_rows = min(2 if W < 24 else 3, max(1, body_h // 3))
+            player = self.kali_player_lines(max(1, W - 2), BG, player_rows)
+            for line in player:
+                rows.append(Line().add(" ", None, BG).extend(line).fill(W, BG))
+            remaining = H - len(rows)
+            if remaining > 0 and W >= 10:
+                rows.append(Line().add(" ", None, BG).extend(self.kali_nav_line(max(1, W - 2), BG)).fill(W, BG))
+            remaining = H - len(rows)
+            if remaining > 0:
+                self.list_y0 = len(rows)
+                rows.extend(
+                    Line().add(" ", None, BG).extend(line).fill(W, BG)
+                    for line in self.kali_list_lines(max(1, W - 2), remaining, BG)
+                )
+        return rows[:H]
 
     def frame_compact(self, W, H):
+        """Standard layout with the supplied XMusic artwork fitted to the viewport."""
         BG = self.c("bg")
+        if W <= 0 or H <= 0:
+            return []
         rows = []
-        logo_w = max(map(len, logo.XMUSIC_ART))
-        if W >= logo_w + 2 and H >= 16:
-            for ln in self.logo_lines("compact", BG):
-                rows.append(Line().add("  ", None, BG).extend(ln).fill(W, BG))
-            rows.append(self.author_line(BG))
-            brand_rows = len(logo.XMUSIC_ART) + 1
-        else:
-            L = Line().add(" ", None, BG)
-            self.wordmark(L, BG)
-            sc = self.status_chunk(BG)
-            if W - 2 - L.w - sc.w < 1:
-                sc = Line().add("● ", self.status()[2], BG).add(self.status()[0], self.status()[1], BG, True)
-            L.add(" " * max(1, W - 1 - L.w - sc.w), None, BG).extend(sc)
-            rows.append(L.fill(W, BG))
-            rows.append(Line().add("   " + AUTHOR_LINE, self.c("muted"), BG).fill(W, BG))
-            brand_rows = 2
-        tabs = Line().add(" ", None, BG)
-        names = NAV if W >= 66 else NAV_SHORT
-        for i, nm in enumerate(names):
-            act = i == self.nav and not self.query
-            fl = self.flashing("tab", i)
-            tabs.add(" " + nm + " ", BG if fl else (self.c("bright") if act else self.c("text2")),
-                     self.c("bright") if fl else (self.c("panel") if act else BG), act, hit=("tab", i))
-            tabs.add(" ", None, BG)
-        rows.append(tabs.fill(W, BG))
-        self.list_y0 = brand_rows + 2
-        for ln in self.list_lines(W - 2, H - brand_rows - 5, BG):
-            rows.append(Line().add(" ", None, BG).extend(ln).fill(W, BG))
-        e, t = self.engine, self.cur
-        L = Line().add(" ", None, BG)
-        for ch, col in self.eq(3):
-            L.add(ch, col, BG)
-        L.add(" ", None, BG)
-        if t:
-            L.add(fit(t.title, max(6, W - 8 - cw(t.artist))), self.c("text"), BG, True)
-            if t.artist:
-                L.add(" · " + fit(t.artist, max(1, W - L.w - 3)), self.c("text2"), BG)
-        else:
-            L.add("Nothing playing", self.c("text2"), BG)
-        rows.append(L.fill(W, BG))
-        pos, dur, fr = self.progress_values()
-        a, b = fmt_time(pos), (fmt_time(dur) if dur else "--:--")
-        L = Line().add(" " + a + " ", self.c("text"), BG)
-        self.bar(L, max(6, W - 4 - cw(a) - cw(b) - 2), fr, BG, "bar")
-        L.add(" " + b, self.c("text2"), BG)
-        rows.append(L.fill(W, BG))
-        L = Line().add(" ", None, BG)
-        self.btn(L, "Prev", ("btn", "prev"), BG)
-        self.btn(L, "Pause" if e.playing else "Play", ("btn", "play"), BG)
-        self.btn(L, "Next", ("btn", "next"), BG)
-        L.add(" ", None, BG)
-        self.mode_buttons(L, BG, short=True)
-        if W - L.w > 27:
-            L.add("  ", None, BG).extend(self.vol_line(W - L.w - 2, BG, label=False))
-        rows.append(L.fill(W, BG))
-        f1, f2 = self.footer_lines(W - 2, BG)
-        rows.append(Line().add(" ", None, BG).extend(f1 if self.toast[0] else f2).fill(W, BG))
-        return rows
+        header_h = max(1, min(6, max(1, (H - 3) // 3)))
+        art = self.logo_lines("compact", BG, max(1, W), header_h, margin=0)
+        rows.extend(line.fill(W, BG) for line in art)
+
+        if H - len(rows) >= 6:
+            rows.append(self.author_line(BG, start=0, width=W).fill(W, BG))
+
+        remaining = H - len(rows)
+        if remaining >= 4 and W >= 8:
+            tabs = Line()
+            names = NAV if W >= 66 else NAV_SHORT
+            for i, name in enumerate(names):
+                label = " " + name + " "
+                if tabs.w + cw(label) > W:
+                    continue
+                active = i == self.nav and not self.query
+                fl = self.flashing("tab", i)
+                tabs.add(label, BG if fl else self.c("bright") if active else self.c("text2"),
+                         self.c("bright") if fl else self.c("panel") if active else BG,
+                         active, hit=("tab", i))
+            rows.append(tabs.fill(W, BG))
+            remaining -= 1
+
+        player_rows = min(3, max(1, remaining // 3)) if remaining else 0
+        list_rows = max(0, remaining - player_rows)
+        self.list_y0 = len(rows)
+        if list_rows:
+            if W >= 12:
+                rows.extend(self.list_lines(W, list_rows, BG))
+            else:
+                items = self.items()
+                visible = max(0, list_rows - 1)
+                self.list_rows = max(1, visible)
+                rows.append(Line().add(fit("LIB %d" % len(items), W), self.c("accent"), BG, True))
+                for off in range(visible):
+                    idx = self.top + off
+                    if idx < len(items):
+                        kind, value = items[idx]
+                        label = value.title if kind == "track" else value.track.title if kind == "q" else self.row_label(kind, value)
+                        line = Line().add(fit(label, W), self.c("text2"), BG, idx == self.sel)
+                        line.hits.append((0, W, "row", off))
+                    else:
+                        line = Line().fill(W, BG)
+                    rows.append(line)
+
+        if player_rows:
+            title = self.cur.title if self.cur else "Nothing playing"
+            prefix = "▶ " if self.engine.playing else "Ⅱ " if self.engine.paused else ""
+            rows.append(Line().add(fit(prefix + title, W), self.c("text") if self.cur else self.c("text2"), BG, bool(self.cur)))
+            if len(rows) < H and player_rows >= 2 and W >= 12:
+                pos, dur, frac = self.progress_values()
+                a, b = fmt_time(pos), (fmt_time(dur) if dur else "--:--")
+                line = Line().add(a + " ", self.c("text"), BG)
+                self.bar(line, max(1, W - cw(a) - cw(b) - 2), frac, BG, "bar")
+                line.add(" " + b, self.c("text2"), BG)
+                rows.append(line.fill(W, BG))
+            if len(rows) < H and player_rows >= 3:
+                line = Line()
+                if W >= 20:
+                    self.btn(line, "Prev", ("btn", "prev"), BG)
+                    self.btn(line, "Play" if not self.engine.playing else "Pause", ("btn", "play"), BG)
+                    self.btn(line, "Next", ("btn", "next"), BG)
+                elif W >= 9:
+                    self.btn(line, "P", ("btn", "prev"), BG)
+                    self.btn(line, "▶" if self.engine.playing else ">", ("btn", "play"), BG)
+                    self.btn(line, "N", ("btn", "next"), BG)
+                else:
+                    line.add(fit("▶" if self.engine.playing else "Ⅱ", W), self.c("accent"), BG)
+                rows.append(line.fill(W, BG))
+        return rows[:H]
 
     def frame_help(self, W, H):
         BG = self.c("bg")
         rows = []
-        L = Line().add(" ", None, BG)
+        L = Line()
         if self.kali_mode:
-            L.add("KALI // ", self.c("brand_b"), BG, True)
+            L.add(fit("KALI // ", W), self.c("brand_b"), BG, True)
         else:
-            self.wordmark(L, BG)
-        L.add("   KEYBOARD & MOUSE", self.c("text2"), BG)
+            art = self.logo_lines("help", BG, max(1, W - 1), 1, margin=0)
+            if art:
+                L.extend(art[0].slice(0, max(0, W - 1)))
+            if L.w < W:
+                L.add(" ", None, BG).add(fit("KEYBOARD & MOUSE", max(0, W - L.w)), self.c("text2"), BG)
         rows.append(L.fill(W, BG))
         rows.append(Line().add("─" * W, self.c("border"), BG))
         two = W >= 76

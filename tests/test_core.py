@@ -128,11 +128,19 @@ check(len(logo.XMUSIC_ART) == 6 and max(map(len, logo.XMUSIC_ART)) == 56,
       "new XMusic block logo retains its exact 6-row, 56-column source dimensions")
 check(logo.rows("big") == [list(line) for line in logo.XMUSIC_ART],
       "all standard themes share the exact supplied XMusic artwork")
+for vw, vh in ((1, 1), (8, 3), (24, 8), (56, 6), (80, 24)):
+    fitted = logo.fit_lines(logo.XMUSIC_ART, vw, vh)
+    check(bool(fitted) and len(fitted) <= vh and max(map(len, fitted)) <= vw,
+          "logo fits viewport %dx%d without a minimum size" % (vw, vh))
 large_xmusic = logo.xmusic_lines()
 check(len(large_xmusic) == 18 and max(map(len, large_xmusic)) == 168,
       "Kali header enlarges the new XMusic logo to 18 rows × 168 columns")
 check(large_xmusic == ["".join(ch * 3 for ch in line) for line in logo.XMUSIC_ART for _ in range(3)],
       "XMusic enlargement preserves every original glyph with uniform 3× nearest-neighbour scaling")
+for vw, vh in ((1, 1), (12, 4), (48, 12), (168, 18), (216, 26)):
+    fitted = logo.fit_lines(large_xmusic, vw, vh)
+    check(bool(fitted) and len(fitted) <= vh and max(map(len, fitted)) <= vw,
+          "scaled Kali logo adapts to viewport %dx%d" % (vw, vh))
 check(all(int(col[4:6], 16) >= int(col[2:4], 16) for col in MATRIX_COLORS),
       "Matrix rain palette is blue-only (blue channel >= green channel)")
 check(AUTHOR_LINE == "Made by Abdellah Mouida", "author attribution text is defined once for both layouts")
