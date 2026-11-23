@@ -17,6 +17,26 @@ EQ = " ▁▂▃▄▅▆▇█"
 INTRO, HL = 0.85, 0.7
 REPEAT_LABEL = {"off": "OFF", "all": "ALL", "one": "ONE"}
 
+AUTHOR_LINE = "Made by Abdellah Mouida"
+MATRIX_GLYPHS = "01#$%+*/<>[]{}"
+MATRIX_COLORS = ("9CFFC0", "46E982", "20A65B", "0C6339")
+
+
+def matrix_glyph(x: int, y: int, frame: int, height: int = 17):
+    """Deterministic single-cell Matrix rain sample: (glyph, brightness index) or None."""
+    seed = (x * 1103515245 + 12345) & 0x7FFFFFFF
+    if seed % 3 == 0:
+        return None
+    speed = 1 + (seed % 2)
+    trail = 3 + (seed // 11) % 5
+    period = height + trail + 9 + (seed // 29) % 13
+    head = (frame // speed + (seed // 127) % period) % period
+    distance = head - y
+    if not 0 <= distance < trail:
+        return None
+    index = (frame // (1 + seed % 3) + x * 7 + y * 11 + seed) % len(MATRIX_GLYPHS)
+    return MATRIX_GLYPHS[index], min(3, distance)
+
 HELP = (
     ("PLAYBACK", None),
     ("Space", "Play / pause"), ("Enter", "Play / open"), ("x", "Stop"), ("n  p", "Next / previous"),
@@ -144,6 +164,11 @@ class Renderer:
                     continue
                 col = Style.lerp(self.c("muted"), col, p)
             L.add(ch, col, bg, True)
+
+    def author_line(self, bg, start=2, width=47) -> Line:
+        """Small attribution aligned beneath the XMusic block logo."""
+        left = start + max(0, (width - cw(AUTHOR_LINE)) // 2)
+        return Line().add(" " * left, None, bg).add(AUTHOR_LINE, self.c("muted"), bg)
 
     def status(self):
         e = self.engine
@@ -477,6 +502,7 @@ class Renderer:
             tag = "HACKER AUDIO TERMINAL"
             L.add(" " * max(1, W - 3 - L.w - cw(tag)), None, BG).add(tag, self.c("text2"), BG)
             box(L)
+            box(Line().add("    " + AUTHOR_LINE, self.c("muted"), BG))
             L = Line().add(" ", None, BG).add("╱╲ ", self.c("brand_b"), BG, True).add("LOCAL AUDIO", self.c("muted"), BG)
             sc = self.status_chunk(BG)
             L.add(" " * max(1, W - 3 - L.w - sc.w), None, BG).extend(sc)
@@ -484,6 +510,7 @@ class Renderer:
         else:
             for ln in self.logo_lines(tier, BG):
                 box(ln)
+            box(self.author_line(BG))
             tagline = "  // LOCAL AUDIO NODE  ·  NO CLOUD"
             L = Line().add(tagline, self.c("text2"), BG)
             sc = self.status_chunk(BG)
@@ -515,35 +542,73 @@ class Renderer:
         return rows
 
     # ---------------------------------------------------------- Kali console
-    def kali_banner_row(self, art_line: str, slot_w: int, bg: str) -> Line:
-        """Render one original Braille-logo row at native size, with a subtle blue/cyan gradient."""
-        width = logo.kali_width()
-        line = art_line.ljust(width, "⠀")
-        left = max(0, (slot_w - width) // 2)
-        out = Line().add(" " * left, None, bg)
-        for x, ch in enumerate(line):
-            if ch in ("⠀", " "):
-                out.add(ch, None, bg)
-            else:
-                col = Style.lerp(self.c("brand_a"), self.c("brand_b"), x / max(1, width - 1))
-                out.add(ch, col, bg, True)
-        out.add(" " * max(0, slot_w - out.w), None, bg)
-        return out
+    def kali_logo_color(self, x: int, width: int) -> str:
+        """A slow blue/cyan wave moves across both Kali-mode marks."""
+        p = x / max(1, width - 1)
+        if self.animate:
+            blend = 0.5 + 0.5 * math.sin(time.monotonic() * 1.25 - p * math.tau)
+            blend = 0.12 + 0.88 * blend
+        else:
+            blend = p
+        return Style.lerp(self.c("brand_a"), self.c("brand_b"), blend)
 
-    def xmusic_banner_row(self, art_line: str, slot_w: int, bg: str) -> Line:
-        """Render one original XMusic block-logo row with Kali's blue-to-cyan accent."""
-        width = max(map(len, logo.XMUSIC_ART))
-        line = art_line.ljust(width)
-        left = max(0, (slot_w - width) // 2)
-        out = Line().add(" " * left, None, bg)
-        for x, ch in enumerate(line):
-            if ch == " ":
-                out.add(ch, None, bg)
-            else:
-                col = Style.lerp(self.c("brand_a"), self.c("brand_b"), x / max(1, width - 1))
-                out.add(ch, col, bg, True)
-        out.add(" " * max(0, slot_w - out.w), None, bg)
-        return out
+    def kali_header_row(self, W: int, row_i: int, bg: str, frame: int) -> Line:
+        """Compose Matrix rain behind the two native-size logos and their maker line."""
+        chars = [" "] * W
+        colors = [None] * W
+        bold = [False] * W
+
+        # Matrix characters occupy the background; the logo glyphs are layered
+        # over them below, so the marks remain crisp and readable.
+        for x in range(W):
+            cell = matrix_glyph(x, row_i, frame, len(logo.kali_lines()))
+            if cell:
+                chars[x], level = cell
+                colors[x] = MATRIX_COLORS[level]
+                bold[x] = level == 0
+
+        dragon = logo.kali_lines()
+        xart = logo.XMUSIC_ART
+        dragon_x = 2
+        dragon_w = logo.kali_width()
+        xmusic_x = dragon_x + dragon_w + 3
+        xmusic_w = max(map(len, xart))
+
+        for x, ch in enumerate(dragon[row_i]):
+            if ch not in ("⠀", " "):
+                pos = dragon_x + x
+                if pos < W:
+                    chars[pos] = ch
+                    colors[pos] = self.kali_logo_color(x, dragon_w)
+                    bold[pos] = True
+
+        brand_top = (len(dragon) - (len(xart) + 1)) // 2
+        xrow = row_i - brand_top
+        if 0 <= xrow < len(xart):
+            for x, ch in enumerate(xart[xrow]):
+                if ch != " ":
+                    pos = xmusic_x + x
+                    if pos < W:
+                        chars[pos] = ch
+                        colors[pos] = self.kali_logo_color(x, xmusic_w)
+                        bold[pos] = True
+        elif xrow == len(xart):
+            left = xmusic_x + max(0, (xmusic_w - cw(AUTHOR_LINE)) // 2)
+            for x, ch in enumerate(AUTHOR_LINE):
+                pos = left + x
+                if pos < W:
+                    chars[pos] = ch
+                    colors[pos] = self.c("text2")
+                    bold[pos] = False
+
+        # Collapse adjacent cells with identical styling into compact draw spans.
+        out = Line()
+        start = 0
+        for end in range(1, W + 1):
+            if end == W or colors[end] != colors[start] or bold[end] != bold[start]:
+                out.add("".join(chars[start:end]), colors[start], bg, bold[start])
+                start = end
+        return out.fill(W, bg)
 
     def kali_nav_line(self, W: int, bg: str) -> Line:
         """Clickable library navigation for the playlist pane."""
@@ -610,8 +675,8 @@ class Renderer:
     def frame_kali(self, W: int, H: int) -> list[Line]:
         """Logo-only Kali header above side-by-side player and playlist panes."""
         BG, B = self.c("bg"), self.c("border")
-        art, xart = logo.kali_lines(), logo.XMUSIC_ART
-        art_w, xart_w = logo.kali_width(), max(map(len, xart))
+        art = logo.kali_lines()
+        art_w, xart_w = logo.kali_width(), max(map(len, logo.XMUSIC_ART))
         min_w = 2 + art_w + 3 + xart_w + 2
         rows: list[Line] = []
 
@@ -623,19 +688,11 @@ class Renderer:
             rows.append(Line().add("  The lower deck uses separate player and playlist panes.", self.c("muted"), BG).fill(W, BG))
             return rows
 
-        # Top strip is intentionally logo-only: the full-size Kali dragon and
-        # the original XMusic block wordmark sit side by side in Kali colours.
-        x_offset = max(0, (len(art) - len(xart)) // 2)
-        for i, line in enumerate(art):
-            L = Line().add("  ", None, BG)
-            L.extend(self.kali_banner_row(line, art_w, BG))
-            L.add("   ", None, BG)
-            xi = i - x_offset
-            if 0 <= xi < len(xart):
-                L.extend(self.xmusic_banner_row(xart[xi], xart_w, BG))
-            else:
-                L.add(" " * xart_w, None, BG)
-            rows.append(L.add("  ", None, BG).fill(W, BG))
+        # The top strip stays logo-only. Matrix rain moves behind the dragon and
+        # XMusic wordmark; a byline sits directly beneath the XMusic mark.
+        frame = int(time.monotonic() * 8) if self.animate else 0
+        for i in range(len(art)):
+            rows.append(self.kali_header_row(W, i, BG, frame))
 
         rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
 
@@ -684,6 +741,7 @@ class Renderer:
             sc = Line().add("● ", self.status()[2], BG).add(self.status()[0], self.status()[1], BG, True)
         L.add(" " * max(1, W - 1 - L.w - sc.w), None, BG).extend(sc)
         rows.append(L.fill(W, BG))
+        rows.append(Line().add("   " + AUTHOR_LINE, self.c("muted"), BG).fill(W, BG))
         tabs = Line().add(" ", None, BG)
         names = NAV if W >= 66 else NAV_SHORT
         for i, nm in enumerate(names):
@@ -693,8 +751,8 @@ class Renderer:
                      self.c("bright") if fl else (self.c("panel") if act else BG), act, hit=("tab", i))
             tabs.add(" ", None, BG)
         rows.append(tabs.fill(W, BG))
-        self.list_y0 = 3
-        for ln in self.list_lines(W - 2, H - 6, BG):
+        self.list_y0 = 4
+        for ln in self.list_lines(W - 2, H - 7, BG):
             rows.append(Line().add(" ", None, BG).extend(ln).fill(W, BG))
         e, t = self.engine, self.cur
         L = Line().add(" ", None, BG)

@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from xmusic_core import config, logo, paths, themes
 from xmusic_core.playlists import Playlists
 from xmusic_core.playqueue import PlayQueue
+from xmusic_core.render import AUTHOR_LINE, matrix_glyph
 
 RES = []
 def check(c, m): RES.append(bool(c)); print(("PASS  " if c else "FAIL  ") + m)
@@ -125,6 +126,12 @@ check(dragon_rows == [line.ljust(logo.kali_width(), "⠀") for line in dragon],
       "Kali terminal rows preserve every original glyph and left-side blank")
 check(len(logo.XMUSIC_ART) == 6 and max(map(len, logo.XMUSIC_ART)) == 47,
       "XMusic block wordmark remains available at its original 6-row, 47-column size for Kali branding")
+check(AUTHOR_LINE == "Made by Abdellah Mouida", "author attribution text is defined once for both layouts")
+matrix_a = [[matrix_glyph(x, y, 8) for x in range(95)] for y in range(17)]
+matrix_b = [[matrix_glyph(x, y, 9) for x in range(95)] for y in range(17)]
+check(any(cell is not None for row in matrix_a for cell in row), "Matrix rain emits visible glyphs in the Kali header")
+check(matrix_a != matrix_b and matrix_a == [[matrix_glyph(x, y, 8) for x in range(95)] for y in range(17)],
+      "Matrix rain advances by frame and remains deterministic for a given frame")
 
 # ---------------------------------------------------------------- themes
 req = {"bg", "panel", "border", "accent", "bright", "hl", "text", "text2", "muted", "rem", "ok", "warn", "err", "brand_a", "brand_b",

@@ -30,9 +30,9 @@ server or telemetry.
 | **Playlists** | create, rename, delete (with confirmation), add/remove tracks, play; stored as readable JSON |
 | **Library** | recursive scan, folder browser, search (title/artist/album/filename), sort, recently played, thousands of tracks |
 | **Themes** | eight dark palettes, AMOLED blue default, live preview, saved between runs, `--theme` flag, `NO_COLOR` respected |
-| **Kali console** | `xmusic --kali` shows the full-size Kali dragon + XMusic logo above split player and playlist panes |
+| **Kali console** | `xmusic --kali` shows the dual-logo header, Matrix rain, animated blue/cyan logo and split player/library panes |
 | **Mouse** | click, double-click, wheel, drag progress/volume bars, clickable buttons, dialogs and shortcut hints |
-| **Animations** | logo reveal, equalizer, track-change highlight - all optional (`--no-animation`) |
+| **Animations** | logo reveal, equalizer, track-change highlight; Kali Matrix rain + flowing logo colours - all optional (`--no-animation`) |
 
 ## Themes
 
@@ -53,18 +53,21 @@ is retained from the earlier six-theme build and has not yet been regenerated.
 Aliases accepted: `rose`/`pink` -> girly, `orange`/`ubuntu` -> yaru, `amoled` -> amoled-blue,
 `amoled-amber` -> amoled-orange, `kali-linux` -> kali, and `purple` -> violet. AMOLED Blue is the default.
 The dedicated `--kali` launch mode places the supplied 17-row dragon beside the original XMusic block logo
-in a top strip reserved only for the two marks. The lower deck is divided into separate player/control and
-playlist/archive panes. Both logos keep their original dimensions and use the Kali blue-to-cyan palette. The
-Kali palette can also be selected with `--theme kali` without switching away from the normal XMusic layout.
-The theme is community-inspired and is not affiliated with or endorsed by Offensive Security.
+in a top strip reserved for the marks, with **Made by Abdellah Mouida** beneath XMusic. The lower deck is
+divided into separate player/control and playlist/archive panes. With animations enabled, Matrix-style
+character rain moves behind the logos while a blue-to-cyan colour wave flows across both marks. Use `z` or
+`--no-animation` to disable the effects. The Kali palette can also be selected with `--theme kali` without
+switching away from the normal XMusic layout. The theme is community-inspired and is not affiliated with
+or endorsed by Offensive Security.
 
 Press `t` to open the picker: move with the arrow keys to **preview live**, `Enter` to apply and save, `Esc` to
 cancel (the previous theme returns). With the mouse: click a theme to preview, click again to apply. An unknown
 saved theme silently falls back to `amoled-blue`.
 
-The combined logo header needs at least 95 terminal columns and 24 rows. The lower half is split between the
-player controls and the playlist/archive; taller terminals reveal more tracks and the full shortcut footer.
-`--theme kali` alone keeps the regular XMusic layout and wordmark.
+The combined logo header needs at least 95 terminal columns and 24 rows. The standard XMusic header also
+shows the maker line directly beneath the logo. The lower Kali deck is split between the player controls
+and playlist/archive; taller terminals reveal more tracks and the full shortcut footer. `--theme kali` alone
+keeps the regular XMusic layout and wordmark.
 
 ![Theme picker](docs/screenshots/theme-picker.png)
 

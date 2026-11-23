@@ -830,6 +830,8 @@ class App(Renderer):
             return 1 / 15
         if self._meta_i < len(self.tracks):
             return 0.005
+        if self.kali_mode and self.animate:
+            t = min(t, 1 / 10)
         if e.playing:
             t = min(0.25, 1.01 - e.position() % 1.0)
             if self.animate:
@@ -855,6 +857,8 @@ class App(Renderer):
                 self.dirty = True
             if self.flash:
                 self.flash = {k: v for k, v in self.flash.items() if v > now}
+                self.dirty = True
+            if self.kali_mode and self.animate:
                 self.dirty = True
             if self.toast[1] and now > self.toast[1]:
                 self.toast, self.dirty = ("", 0.0, "info"), True
