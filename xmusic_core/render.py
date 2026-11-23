@@ -693,7 +693,7 @@ class Renderer:
             return rows[:H]
 
         inner_w = max(1, W - 4)
-        header_budget = max(1, min(18, H - 3))
+        header_budget = max(1, min(19, H - 3))
         dragon_source, xmusic_source = logo.kali_lines(), logo.xmusic_lines()
         placements = []
         if W >= 60:
