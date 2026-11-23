@@ -252,7 +252,7 @@ python3 -m venv venv && ./venv/bin/pip install -r requirements.txt -r requiremen
 ```bash
 ./tests/make_test_music.sh /tmp/Music      # needs ffmpeg: tagged, corrupt, empty and garbage MP3s
 mkdir -p /tmp/Music2 && cp /tmp/Music/Rock/*.mp3 /tmp/Music/Jazz/Gamma.mp3 /tmp/Music/Jazz/Live/Delta.mp3 "/tmp/Music/No Tags.mp3" /tmp/Music/Notags2.mp3 /tmp/Music2/
-./venv/bin/python tests/test_core.py                        # 64 checks: queue, shuffle, repeat, playlists, config, themes, paths
+./venv/bin/python tests/test_core.py                        # 70 checks: queue, shuffle, repeat, playlists, config, themes, paths
 ./venv/bin/python tests/test_platform.py                    # 22 checks: input parser, simulated OSes, static portability scans
 ./venv/bin/python tests/test_engine.py /tmp/Music           # headless audio engine on miniaudio's null backend
 ./venv/bin/python tests/test_pty.py /tmp/Music /tmp/Music2  # 118 end-to-end checks in a pseudo-terminal (Linux/macOS)
