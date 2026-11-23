@@ -30,24 +30,22 @@ _KALI_ART = """⠀⠀⠀⠀⠠⠤⠤⠤⠤⠤⣤⣤⣤⣄⣀⣀⠀⠀⠀⠀⠀�
 
 
 def _compact_kali(tier: str) -> list[str]:
-    source = [line.rstrip() for line in _KALI_ART.splitlines()]
+    """Downsample the supplied Braille dragon without losing its left alignment."""
+    source = _KALI_ART.splitlines()
+    source_width = max((len(line) for line in source), default=0)
+    target_width = 46 if tier == "big" else 38
     step = 2 if tier == "big" else 3
-    width = 46 if tier == "big" else 38
+    ratio = source_width / max(1, target_width)
     out = []
-    for line in source[::step]:
-        line = line.strip(" \u2800")
-        if not line:
-            continue
-        if len(line) > width:
-            ratio = len(line) / width
-            reduced = []
-            for col in range(width):
-                start = int(col * ratio)
-                end = max(int((col + 1) * ratio), start + 1)
-                segment = line[start:end]
-                reduced.append(next((ch for ch in segment if ch not in " \u2800"), " "))
-            line = "".join(reduced)
-        out.append(line)
+    for raw in source[::step]:
+        line = raw.ljust(source_width, "⠀")
+        reduced = []
+        for col in range(target_width):
+            first = int(col * ratio)
+            last = max(int((col + 1) * ratio), first + 1)
+            segment = line[first:last]
+            reduced.append(next((ch for ch in segment if ch not in (" ", "⠀")), "⠀"))
+        out.append("".join(reduced).rstrip("⠀"))
     return out
 
 
