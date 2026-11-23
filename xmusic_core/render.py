@@ -89,13 +89,13 @@ class Renderer:
         self.hits = []
         if W <= 0 or H <= 0:
             return
-        if self.kali_mode:
+        if self.help and W >= 30 and H >= 9:
+            rows, self.mode = self.frame_help(W, H), "help"
+        elif self.kali_mode:
             rows, self.mode = self.frame_kali(W, H), "kali"
         elif W < 30 or H < 9:
             rows = self.frame_compact(W, H)
             self.mode = "compact"
-        elif self.help:
-            rows, self.mode = self.frame_help(W, H), "help"
         elif W >= 76 and H >= 18:
             rows, self.mode = self.frame_full(W, H), "full"
         else:
@@ -763,18 +763,21 @@ class Renderer:
         else:
             # Narrow or short screens stack player, navigation, then library.
             player_rows = min(2 if W < 24 else 3, max(1, body_h // 3))
-            player = self.kali_player_lines(max(1, W - 2), BG, player_rows)
+            pad = 1 if W >= 3 else 0
+            pane_w = max(1, W - 2 * pad)
+            player = self.kali_player_lines(pane_w, BG, player_rows)
             for line in player:
-                rows.append(Line().add(" ", None, BG).extend(line).fill(W, BG))
+                rows.append(Line().add(" " * pad, None, BG).extend(line).fill(W, BG))
             remaining = H - len(rows)
             if remaining > 0 and W >= 10:
-                rows.append(Line().add(" ", None, BG).extend(self.kali_nav_line(max(1, W - 2), BG)).fill(W, BG))
+                nav = self.kali_nav_line(pane_w, BG)
+                rows.append(Line().add(" " * pad, None, BG).extend(nav).fill(W, BG))
             remaining = H - len(rows)
             if remaining > 0:
                 self.list_y0 = len(rows)
                 rows.extend(
-                    Line().add(" ", None, BG).extend(line).fill(W, BG)
-                    for line in self.kali_list_lines(max(1, W - 2), remaining, BG)
+                    Line().add(" " * pad, None, BG).extend(line).fill(W, BG)
+                    for line in self.kali_list_lines(pane_w, remaining, BG)
                 )
         return rows[:H]
 
