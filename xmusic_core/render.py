@@ -557,18 +557,19 @@ class Renderer:
         chars = [" "] * W
         colors = [None] * W
         bold = [False] * W
-
-        # Matrix characters occupy the background; the logo glyphs are layered
-        # over them below, so the marks remain crisp and readable.
-        for x in range(W):
-            cell = matrix_glyph(x, row_i, frame, len(logo.kali_lines()))
-            if cell:
-                chars[x], level = cell
-                colors[x] = MATRIX_COLORS[level]
-                bold[x] = level == 0
-
         dragon = logo.kali_lines()
         xart = logo.XMUSIC_ART
+
+        # Matrix characters occupy the background only while animation is on;
+        # the logo glyphs are layered over them below and remain crisp.
+        if self.animate:
+            for x in range(W):
+                cell = matrix_glyph(x, row_i, frame, len(dragon))
+                if cell:
+                    chars[x], level = cell
+                    colors[x] = MATRIX_COLORS[level]
+                    bold[x] = level == 0
+
         dragon_x = 2
         dragon_w = logo.kali_width()
         xmusic_x = dragon_x + dragon_w + 3
