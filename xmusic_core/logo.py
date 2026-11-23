@@ -29,6 +29,25 @@ _KALI_ART = """⠀⠀⠀⠀⠠⠤⠤⠤⠤⠤⣤⣤⣤⣄⣀⣀⠀⠀⠀⠀⠀�
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠃⠀"""
 
 
+XMUSIC_KALI_SCALE = 3
+
+
+def xmusic_lines(scale: int = XMUSIC_KALI_SCALE) -> list[str]:
+    """Enlarge untouched XMusic block art evenly in both axes.
+
+    Nearest-neighbour cell scaling: each original glyph is repeated
+    horizontally and each source row vertically. No redraw, distortion,
+    or cropping is applied.
+    """
+    if not isinstance(scale, int) or scale < 1:
+        raise ValueError("scale must be a positive integer")
+    return [
+        "".join(ch * scale for ch in line)
+        for line in XMUSIC_ART
+        for _ in range(scale)
+    ]
+
+
 def kali_lines() -> list[str]:
     """Exact, unscaled 17-row Kali dragon supplied for the dedicated --kali layout."""
     return _KALI_ART.splitlines()

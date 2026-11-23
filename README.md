@@ -64,15 +64,15 @@ xmusic --kali --music-dir ~/Music
 
 The Kali console gets its own composition rather than merely recolouring the standard screen:
 
-- **Dual-logo header:** the full-size Kali dragon beside the original XMusic block logo.
+- **Dual-logo header:** the full-size Kali dragon beside the original XMusic block logo enlarged proportionally by 3×.
 - **Author signature:** <code>Made by Abdellah Mouida</code> directly beneath the XMusic mark.
-- **Matrix rain:** animated characters flow behind the logos, leaving the lettering crisp.
+- **Blue Matrix rain:** animated blue characters flow behind the logos, leaving the lettering crisp.
 - **Colour motion:** a blue-to-cyan wave moves across both marks.
 - **Split lower deck:** a dedicated **PLAYER** pane beside the **PLAYLIST / ARCHIVE** pane.
-- **Native-size artwork:** the logos are never shrunk or cropped to force a fit.
+- **Preserved artwork:** the original XMusic glyphs are repeated evenly in both directions — no redraw, distortion, or cropping.
 
 <blockquote>
-  <strong>Terminal size:</strong> the full dual-logo header requires at least <code>95 columns × 24 rows</code>. Increase the terminal size to see the complete layout.
+  <strong>Terminal size:</strong> the full dual-logo header requires at least <code>189 columns × 26 rows</code>. Increase the terminal size to see the complete layout.
 </blockquote>
 
 Animations are enabled by default. Press <code>z</code> to toggle them during a session, or launch with <code>--no-animation</code> to disable the intro, Matrix effect, equalizer, and other motion.

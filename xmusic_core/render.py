@@ -19,7 +19,7 @@ REPEAT_LABEL = {"off": "OFF", "all": "ALL", "one": "ONE"}
 
 AUTHOR_LINE = "Made by Abdellah Mouida"
 MATRIX_GLYPHS = "01#$%+*/<>[]{}"
-MATRIX_COLORS = ("9CFFC0", "46E982", "20A65B", "0C6339")
+MATRIX_COLORS = ("E3F2FF", "80C4FF", "367BF5", "153D82")
 
 
 def matrix_glyph(x: int, y: int, frame: int, height: int = 17):
@@ -552,48 +552,48 @@ class Renderer:
             blend = p
         return Style.lerp(self.c("brand_a"), self.c("brand_b"), blend)
 
-    def kali_header_row(self, W: int, row_i: int, bg: str, frame: int) -> Line:
-        """Compose Matrix rain behind the two native-size logos and their maker line."""
+    def kali_header_row(self, W: int, row_i: int, bg: str, frame: int, header_h: int) -> Line:
+        """Compose blue Matrix rain behind the dragon and proportionally enlarged XMusic art."""
         chars = [" "] * W
         colors = [None] * W
         bold = [False] * W
         dragon = logo.kali_lines()
-        xart = logo.XMUSIC_ART
+        xart = logo.xmusic_lines()
 
-        # Matrix characters occupy the background only while animation is on;
-        # the logo glyphs are layered over them below and remain crisp.
+        # Matrix rain uses blue shades and remains behind the logo glyphs.
         if self.animate:
             for x in range(W):
-                cell = matrix_glyph(x, row_i, frame, len(dragon))
+                cell = matrix_glyph(x, row_i, frame, header_h)
                 if cell:
                     chars[x], level = cell
                     colors[x] = MATRIX_COLORS[level]
                     bold[x] = level == 0
 
-        dragon_x = 2
         dragon_w = logo.kali_width()
-        xmusic_x = dragon_x + dragon_w + 3
         xmusic_w = max(map(len, xart))
+        dragon_x = 2
+        xmusic_x = dragon_x + dragon_w + 3
+        dragon_top = (header_h - len(dragon)) // 2
+        dragon_row = row_i - dragon_top
 
-        for x, ch in enumerate(dragon[row_i]):
-            if ch not in ("⠀", " "):
-                pos = dragon_x + x
-                if pos < W:
-                    chars[pos] = ch
-                    colors[pos] = self.kali_logo_color(x, dragon_w)
-                    bold[pos] = True
+        if 0 <= dragon_row < len(dragon):
+            for x, ch in enumerate(dragon[dragon_row]):
+                if ch not in ("⠀", " "):
+                    pos = dragon_x + x
+                    if pos < W:
+                        chars[pos] = ch
+                        colors[pos] = self.kali_logo_color(x, dragon_w)
+                        bold[pos] = True
 
-        brand_top = (len(dragon) - (len(xart) + 1)) // 2
-        xrow = row_i - brand_top
-        if 0 <= xrow < len(xart):
-            for x, ch in enumerate(xart[xrow]):
+        if 0 <= row_i < len(xart):
+            for x, ch in enumerate(xart[row_i]):
                 if ch != " ":
                     pos = xmusic_x + x
                     if pos < W:
                         chars[pos] = ch
                         colors[pos] = self.kali_logo_color(x, xmusic_w)
                         bold[pos] = True
-        elif xrow == len(xart):
+        elif row_i == len(xart):
             left = xmusic_x + max(0, (xmusic_w - cw(AUTHOR_LINE)) // 2)
             for x, ch in enumerate(AUTHOR_LINE):
                 pos = left + x
@@ -602,7 +602,6 @@ class Renderer:
                     colors[pos] = self.c("text2")
                     bold[pos] = False
 
-        # Collapse adjacent cells with identical styling into compact draw spans.
         out = Line()
         start = 0
         for end in range(1, W + 1):
@@ -677,13 +676,15 @@ class Renderer:
         """Logo-only Kali header above side-by-side player and playlist panes."""
         BG, B = self.c("bg"), self.c("border")
         art = logo.kali_lines()
-        art_w, xart_w = logo.kali_width(), max(map(len, logo.XMUSIC_ART))
-        min_w = 2 + art_w + 3 + xart_w + 2
+        xart = logo.xmusic_lines()
+        art_w, xart_w = logo.kali_width(), max(map(len, xart))
+        header_h = max(len(art), len(xart) + 1)
+        min_w, min_h = 2 + art_w + 3 + xart_w + 2, header_h + 7
         rows: list[Line] = []
 
-        if W < min_w or H < 24:
+        if W < min_w or H < min_h:
             message = ("KALI + XMUSIC LOGOS NEED %d COLUMNS" % min_w if W < min_w
-                       else "KALI MODE NEEDS AT LEAST 24 ROWS")
+                       else "KALI MODE NEEDS AT LEAST %d ROWS" % min_h)
             rows.append(Line().add("  " + message, self.c("warn"), BG, True).fill(W, BG))
             rows.append(Line().add("  Widen or heighten the terminal; both logos stay at native size.", self.c("text2"), BG).fill(W, BG))
             rows.append(Line().add("  The lower deck uses separate player and playlist panes.", self.c("muted"), BG).fill(W, BG))
@@ -692,8 +693,8 @@ class Renderer:
         # The top strip stays logo-only. Matrix rain moves behind the dragon and
         # XMusic wordmark; a byline sits directly beneath the XMusic mark.
         frame = int(time.monotonic() * 8) if self.animate else 0
-        for i in range(len(art)):
-            rows.append(self.kali_header_row(W, i, BG, frame))
+        for i in range(header_h):
+            rows.append(self.kali_header_row(W, i, BG, frame, header_h))
 
         rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
 

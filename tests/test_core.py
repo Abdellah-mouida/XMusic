@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from xmusic_core import config, logo, paths, themes
 from xmusic_core.playlists import Playlists
 from xmusic_core.playqueue import PlayQueue
-from xmusic_core.render import AUTHOR_LINE, matrix_glyph
+from xmusic_core.render import AUTHOR_LINE, MATRIX_COLORS, matrix_glyph
 
 RES = []
 def check(c, m): RES.append(bool(c)); print(("PASS  " if c else "FAIL  ") + m)
@@ -126,6 +126,13 @@ check(dragon_rows == [line.ljust(logo.kali_width(), "⠀") for line in dragon],
       "Kali terminal rows preserve every original glyph and left-side blank")
 check(len(logo.XMUSIC_ART) == 6 and max(map(len, logo.XMUSIC_ART)) == 47,
       "XMusic block wordmark remains available at its original 6-row, 47-column size for Kali branding")
+large_xmusic = logo.xmusic_lines()
+check(len(large_xmusic) == 18 and max(map(len, large_xmusic)) == 141,
+      "Kali header enlarges XMusic to 18 rows × 141 columns")
+check(large_xmusic == ["".join(ch * 3 for ch in line) for line in logo.XMUSIC_ART for _ in range(3)],
+      "XMusic enlargement preserves every original glyph with uniform 3× nearest-neighbour scaling")
+check(all(int(col[4:6], 16) >= int(col[2:4], 16) for col in MATRIX_COLORS),
+      "Matrix rain palette is blue-only (blue channel >= green channel)")
 check(AUTHOR_LINE == "Made by Abdellah Mouida", "author attribution text is defined once for both layouts")
 matrix_a = [[matrix_glyph(x, y, 8) for x in range(95)] for y in range(17)]
 matrix_b = [[matrix_glyph(x, y, 9) for x in range(95)] for y in range(17)]
