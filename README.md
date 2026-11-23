@@ -73,7 +73,7 @@ The Kali console gets its own composition rather than merely recolouring the sta
 - **Preserved artwork:** the original XMusic glyphs are repeated evenly in both directions — no redraw, distortion, or cropping.
 
 <blockquote>
-  <strong>Terminal size:</strong> the full dual-logo header requires at least <code>189 columns × 26 rows</code>. Increase the terminal size to see the complete layout.
+  <strong>Terminal size:</strong> the full dual-logo header requires at least <code>216 columns × 26 rows</code>. Increase the terminal size to see the complete layout.
 </blockquote>
 
 Animations are enabled by default. Press <code>z</code> to toggle them during a session, or launch with <code>--no-animation</code> to disable the intro, Matrix effect, equalizer, and other motion.

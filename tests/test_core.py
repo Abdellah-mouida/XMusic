@@ -124,11 +124,13 @@ check(len(dragon) == 17 and logo.kali_width() == 41 and logo.height("big", kali=
       "Kali dragon keeps its original 17-row, 41-column native size")
 check(dragon_rows == [line.ljust(logo.kali_width(), "⠀") for line in dragon],
       "Kali terminal rows preserve every original glyph and left-side blank")
-check(len(logo.XMUSIC_ART) == 6 and max(map(len, logo.XMUSIC_ART)) == 47,
-      "XMusic block wordmark remains available at its original 6-row, 47-column size for Kali branding")
+check(len(logo.XMUSIC_ART) == 6 and max(map(len, logo.XMUSIC_ART)) == 56,
+      "new XMusic block logo retains its exact 6-row, 56-column source dimensions")
+check(logo.rows("big") == [list(line) for line in logo.XMUSIC_ART],
+      "all standard themes share the exact supplied XMusic artwork")
 large_xmusic = logo.xmusic_lines()
-check(len(large_xmusic) == 18 and max(map(len, large_xmusic)) == 141,
-      "Kali header enlarges XMusic to 18 rows × 141 columns")
+check(len(large_xmusic) == 18 and max(map(len, large_xmusic)) == 168,
+      "Kali header enlarges the new XMusic logo to 18 rows × 168 columns")
 check(large_xmusic == ["".join(ch * 3 for ch in line) for line in logo.XMUSIC_ART for _ in range(3)],
       "XMusic enlargement preserves every original glyph with uniform 3× nearest-neighbour scaling")
 check(all(int(col[4:6], 16) >= int(col[2:4], 16) for col in MATRIX_COLORS),

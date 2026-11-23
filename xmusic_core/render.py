@@ -165,8 +165,9 @@ class Renderer:
                 col = Style.lerp(self.c("muted"), col, p)
             L.add(ch, col, bg, True)
 
-    def author_line(self, bg, start=2, width=47) -> Line:
+    def author_line(self, bg, start=2, width=None) -> Line:
         """Small attribution aligned beneath the XMusic block logo."""
+        width = width or max(map(len, logo.XMUSIC_ART))
         left = start + max(0, (width - cw(AUTHOR_LINE)) // 2)
         return Line().add(" " * left, None, bg).add(AUTHOR_LINE, self.c("muted"), bg)
 
@@ -497,15 +498,13 @@ class Renderer:
         tier = "big" if H >= 30 else "mid" if H >= 21 else "small"
         edge("╭", "╮")
         if tier == "small":
-            L = Line().add(" ", None, BG)
-            self.wordmark(L, BG, "╲╱ ")
-            tag = "HACKER AUDIO TERMINAL"
-            L.add(" " * max(1, W - 3 - L.w - cw(tag)), None, BG).add(tag, self.c("text2"), BG)
-            box(L)
-            box(Line().add("    " + AUTHOR_LINE, self.c("muted"), BG))
-            L = Line().add(" ", None, BG).add("╱╲ ", self.c("brand_b"), BG, True).add("LOCAL AUDIO", self.c("muted"), BG)
+            for ln in self.logo_lines(tier, BG):
+                box(ln)
+            box(self.author_line(BG))
+            tagline = "  // LOCAL AUDIO NODE"
+            L = Line().add(tagline, self.c("text2"), BG)
             sc = self.status_chunk(BG)
-            L.add(" " * max(1, W - 3 - L.w - sc.w), None, BG).extend(sc)
+            L.add(" " * max(1, W - 4 - L.w - sc.w), None, BG).extend(sc)
             box(L)
         else:
             for ln in self.logo_lines(tier, BG):
@@ -736,14 +735,22 @@ class Renderer:
     def frame_compact(self, W, H):
         BG = self.c("bg")
         rows = []
-        L = Line().add(" ", None, BG)
-        self.wordmark(L, BG)
-        sc = self.status_chunk(BG)
-        if W - 2 - L.w - sc.w < 1:
-            sc = Line().add("● ", self.status()[2], BG).add(self.status()[0], self.status()[1], BG, True)
-        L.add(" " * max(1, W - 1 - L.w - sc.w), None, BG).extend(sc)
-        rows.append(L.fill(W, BG))
-        rows.append(Line().add("   " + AUTHOR_LINE, self.c("muted"), BG).fill(W, BG))
+        logo_w = max(map(len, logo.XMUSIC_ART))
+        if W >= logo_w + 2 and H >= 16:
+            for ln in self.logo_lines("compact", BG):
+                rows.append(Line().add("  ", None, BG).extend(ln).fill(W, BG))
+            rows.append(self.author_line(BG))
+            brand_rows = len(logo.XMUSIC_ART) + 1
+        else:
+            L = Line().add(" ", None, BG)
+            self.wordmark(L, BG)
+            sc = self.status_chunk(BG)
+            if W - 2 - L.w - sc.w < 1:
+                sc = Line().add("● ", self.status()[2], BG).add(self.status()[0], self.status()[1], BG, True)
+            L.add(" " * max(1, W - 1 - L.w - sc.w), None, BG).extend(sc)
+            rows.append(L.fill(W, BG))
+            rows.append(Line().add("   " + AUTHOR_LINE, self.c("muted"), BG).fill(W, BG))
+            brand_rows = 2
         tabs = Line().add(" ", None, BG)
         names = NAV if W >= 66 else NAV_SHORT
         for i, nm in enumerate(names):
@@ -753,8 +760,8 @@ class Renderer:
                      self.c("bright") if fl else (self.c("panel") if act else BG), act, hit=("tab", i))
             tabs.add(" ", None, BG)
         rows.append(tabs.fill(W, BG))
-        self.list_y0 = 4
-        for ln in self.list_lines(W - 2, H - 7, BG):
+        self.list_y0 = brand_rows + 2
+        for ln in self.list_lines(W - 2, H - brand_rows - 5, BG):
             rows.append(Line().add(" ", None, BG).extend(ln).fill(W, BG))
         e, t = self.engine, self.cur
         L = Line().add(" ", None, BG)
