@@ -30,6 +30,7 @@ server or telemetry.
 | **Playlists** | create, rename, delete (with confirmation), add/remove tracks, play; stored as readable JSON |
 | **Library** | recursive scan, folder browser, search (title/artist/album/filename), sort, recently played, thousands of tracks |
 | **Themes** | eight dark palettes, AMOLED blue default, live preview, saved between runs, `--theme` flag, `NO_COLOR` respected |
+| **Kali console** | `xmusic --kali` launches the full-size 17-row dragon layout with playback sidecar and archive below |
 | **Mouse** | click, double-click, wheel, drag progress/volume bars, clickable buttons, dialogs and shortcut hints |
 | **Animations** | logo reveal, equalizer, track-change highlight - all optional (`--no-animation`) |
 
@@ -51,12 +52,18 @@ is retained from the earlier six-theme build and has not yet been regenerated.
 
 Aliases accepted: `rose`/`pink` -> girly, `orange`/`ubuntu` -> yaru, `amoled` -> amoled-blue,
 `amoled-amber` -> amoled-orange, `kali-linux` -> kali, and `purple` -> violet. AMOLED Blue is the default.
-Kali mode uses the supplied dragon mark in a compact terminal raster and a Kali-blue/cyan palette; it is
-community-inspired and is not affiliated with or endorsed by Offensive Security.
+The dedicated `--kali` launch mode uses the supplied dragon mark at its original 17-row size, with a playback
+sidecar and a full-width track archive underneath. The Kali palette can also be selected with `--theme kali`
+without switching away from the normal XMusic layout. The theme is community-inspired and is not affiliated
+with or endorsed by Offensive Security.
 
 Press `t` to open the picker: move with the arrow keys to **preview live**, `Enter` to apply and save, `Esc` to
 cancel (the previous theme returns). With the mouse: click a theme to preview, click again to apply. An unknown
 saved theme silently falls back to `amoled-blue`.
+
+Kali layout needs at least 45 terminal columns and 24 rows to preserve the supplied dragon at native size.
+Wide terminals place the dragon beside the signal monitor; narrower supported terminals center the dragon
+above the navigation and archive. `--theme kali` alone keeps the regular XMusic layout and wordmark.
 
 ![Theme picker](docs/screenshots/theme-picker.png)
 
@@ -107,6 +114,7 @@ pip install .          # provides the `xmusic` command (also: python -m xmusic_c
 ## Quick start
 ```bash
 xmusic --music-dir ~/Music      # first run: pick your folder; it is remembered
+xmusic --kali --music-dir ~/Music  # native-size Kali dragon console
 ```
 Press `Enter` on a track to play, `?` for help. If `~/Music` doesn't exist and no folder is given, XMusic asks for one.
 
@@ -168,11 +176,12 @@ XMusic 1.x playlists/recent entries stored in `config.json` are imported automat
 
 ## Command-line options
 ```text
-xmusic [--music-dir DIR] [--theme ID] [--no-animation] [--ascii] [--version] [--help]
+xmusic [--music-dir DIR] [--theme ID | --kali] [--no-animation] [--ascii] [--version] [--help]
 ```
 ```bash
 ./venv/bin/python xmusic.py --music-dir ~/Music
 ./venv/bin/python xmusic.py --theme amoled-orange    # amoled-blue | amoled-orange | kali | blue | girly | yaru | amoled-pink | violet
+./venv/bin/python xmusic.py --kali                   # native-size Kali dragon TUI
 ./venv/bin/python xmusic.py --no-animation
 ```
 

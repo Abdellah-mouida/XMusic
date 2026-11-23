@@ -18,12 +18,13 @@ from .ui import fit
 
 class App(Renderer):
     def __init__(self, root: str, settings: Settings, state: State, playlists: Playlists, *, animate=True,
-                 null_audio=False, ascii_mode=False, theme_id: str | None = None):
+                 null_audio=False, ascii_mode=False, theme_id: str | None = None, kali_mode=False):
         self.root, self.settings, self.state, self.playlists = root, settings, state, playlists
         self.animate, self.ascii = animate, ascii_mode
         self.term = make_terminal()
         self.style = Style()
         self.theme = themes.get(theme_id or settings["theme"])
+        self.kali_mode = bool(kali_mode)
         self.engine = Engine(null=null_audio)
         self.engine.set_volume(settings["volume"])
         self.engine.set_muted(settings["muted"])

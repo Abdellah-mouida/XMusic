@@ -72,6 +72,8 @@ class Renderer:
             self.mode = "tiny"
         elif self.help:
             rows, self.mode = self.frame_help(W, H), "help"
+        elif self.kali_mode:
+            rows, self.mode = self.frame_kali(W, H), "kali"
         elif W >= 76 and H >= 18:
             rows, self.mode = self.frame_full(W, H), "full"
         else:
@@ -106,7 +108,7 @@ class Renderer:
 
     # ---------------------------------------------------------------- brand
     def logo_lines(self, tier: str, bg: str) -> list[Line]:
-        cols = logo.rows(tier, kali=self.theme["id"] == "kali")
+        cols = logo.rows(tier)
         pw = len(cols[0])
         edge = None
         if self.intro:
@@ -131,10 +133,7 @@ class Renderer:
 
     def wordmark(self, L, bg, mark="╳ "):
         t = time.monotonic() - self.t0
-        if self.theme["id"] == "kali":
-            L.add("KALI // ", self.c("brand_b"), bg, True)
-        else:
-            L.add(mark, self.c("brand_b"), bg, True)
+        L.add(mark, self.c("brand_b"), bg, True)
         label = "XMUSIC"
         for i, ch in enumerate(label):
             col = Style.lerp(self.c("brand_a"), self.c("brand_b"), i / max(1, len(label) - 1))
@@ -515,6 +514,98 @@ class Renderer:
         edge("╰", "╯")
         return rows
 
+    # ---------------------------------------------------------- Kali console
+    def kali_banner_row(self, art_line: str, slot_w: int, bg: str) -> Line:
+        """Render one original Braille-logo row at native size, with a subtle blue/cyan gradient."""
+        width = logo.kali_width()
+        line = art_line.ljust(width, "⠀")
+        left = max(0, (slot_w - width) // 2)
+        out = Line().add(" " * left, None, bg)
+        for x, ch in enumerate(line):
+            if ch in ("⠀", " "):
+                out.add(ch, None, bg)
+            else:
+                col = Style.lerp(self.c("brand_a"), self.c("brand_b"), x / max(1, width - 1))
+                out.add(ch, col, bg, True)
+        out.add(" " * max(0, slot_w - out.w), None, bg)
+        return out
+
+    def kali_nav_line(self, W: int, bg: str) -> Line:
+        """Wide clickable navigation strip used below the standalone dragon."""
+        L = Line().add("  KALI // ", self.c("brand_b"), bg, True)
+        names = ("ALL", "DIRECTORIES", "QUEUE", "PLAYLISTS", "RECENT")
+        for i, name in enumerate(names):
+            active = i == self.nav and not self.query
+            fl = self.flashing("tab", i)
+            fg = bg if fl else self.c("bright") if active else self.c("text2")
+            fill = self.c("accent") if fl else self.c("panel") if active else bg
+            L.add(" " + name + " ", fg, fill, active or fl, hit=("tab", i))
+            L.add(" ", None, bg)
+        L.add("  ·  ", self.c("muted"), bg)
+        L.add("%d TRACKS" % len(self.tracks), self.c("muted"), bg)
+        return L.fill(W, bg)
+
+    def frame_kali(self, W: int, H: int) -> list[Line]:
+        """Dedicated native-size Kali console: dragon + playback sidecar + full-width library."""
+        BG, B = self.c("bg"), self.c("border")
+        art = logo.kali_lines()
+        art_w = logo.kali_width()
+        rows: list[Line] = []
+
+        if W < art_w + 4 or H < 24:
+            message = ("KALI MODE NEEDS %d COLUMNS" % (art_w + 4) if W < art_w + 4
+                       else "KALI MODE NEEDS AT LEAST 24 ROWS")
+            rows.append(Line().add("  " + message, self.c("warn"), BG, True).fill(W, BG))
+            rows.append(Line().add("  Resize the terminal to keep the original dragon size.", self.c("text2"), BG).fill(W, BG))
+            rows.append(Line().add("  No logo scaling or cropping is used in Kali mode.", self.c("muted"), BG).fill(W, BG))
+            return rows
+
+        # On a normal 80-column terminal, the 41-column dragon gets its own
+        # left-hand stage. The signal monitor moves into the right-hand rail.
+        if W >= 76:
+            logo_slot = art_w + 2
+            right_w = W - logo_slot - 3
+            monitor = self.now_lines(right_w, BG, len(art))
+            for i, line in enumerate(art):
+                L = Line()
+                L.extend(self.kali_banner_row(line, logo_slot, BG))
+                L.add(" │ ", B, BG)
+                if i < len(monitor):
+                    L.extend(monitor[i])
+                rows.append(L.fill(W, BG))
+        else:
+            # Narrower terminals keep the mark centered at its exact size;
+            # the compact status strip replaces the unavailable side rail.
+            for line in art:
+                rows.append(self.kali_banner_row(line, W, BG))
+            L = Line().add("  KALI AUDIO NODE  //  ", self.c("brand_b"), BG, True)
+            L.add(self.status()[0], self.status()[1], BG, True)
+            if self.cur:
+                L.add("  ·  " + fit(self.cur.title, max(1, W - L.w - 4)), self.c("text"), BG)
+            rows.append(L.fill(W, BG))
+
+        # Navigation and the archive now sit beneath the large standalone mark.
+        rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
+        rows.append(self.kali_nav_line(W, BG))
+        self.list_y0 = len(rows) + 1
+        tall = H >= 29
+        footer_rows = 2 if tall else 1
+        closing_rows = 2 if tall else 0
+        visible = max(1, H - len(rows) - footer_rows - closing_rows)
+        for ln in self.list_lines(W - 4, visible, BG):
+            rows.append(Line().add("  ", None, BG).extend(ln).fill(W, BG))
+
+        if tall:
+            rows.append(Line().add("├" + "─" * max(0, W - 2) + "┤", B, BG))
+            f1, f2 = self.footer_lines(W - 4, BG)
+            rows.append(Line().add("  ", None, BG).extend(f1).fill(W, BG))
+            rows.append(Line().add("  ", None, BG).extend(f2).fill(W, BG))
+            rows.append(Line().add("╰" + "─" * max(0, W - 2) + "╯", B, BG))
+        else:
+            f1, f2 = self.footer_lines(W - 2, BG)
+            rows.append(Line().add(" ", None, BG).extend(f1 if self.toast[0] else f2).fill(W, BG))
+        return rows
+
     def frame_compact(self, W, H):
         BG = self.c("bg")
         rows = []
@@ -572,7 +663,10 @@ class Renderer:
         BG = self.c("bg")
         rows = []
         L = Line().add(" ", None, BG)
-        self.wordmark(L, BG)
+        if self.kali_mode:
+            L.add("KALI // ", self.c("brand_b"), BG, True)
+        else:
+            self.wordmark(L, BG)
         L.add("   KEYBOARD & MOUSE", self.c("text2"), BG)
         rows.append(L.fill(W, BG))
         rows.append(Line().add("─" * W, self.c("border"), BG))

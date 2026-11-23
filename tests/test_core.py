@@ -2,7 +2,7 @@
 import json, os, random, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from xmusic_core import config, paths, themes
+from xmusic_core import config, logo, paths, themes
 from xmusic_core.playlists import Playlists
 from xmusic_core.playqueue import PlayQueue
 
@@ -115,6 +115,14 @@ check(s4["theme"] == "blue" and s4.warning and (d / "config.json.bad").exists(),
 check(config.Settings(d).load().legacy.get("recent") == ["/a.mp3"], "1.x config: legacy recent/playlists detected for migration")
 st = config.State(d); st.recent, st.queue, st.current = ["/a"], ["/a", "/b"], "/b"; st.save()
 st2 = config.State(d).load(); check((st2.recent, st2.queue, st2.current) == (["/a"], ["/a", "/b"], "/b"), "recent + queue state round-trip")
+
+# ---------------------------------------------------------------- terminal identity
+dragon = logo.kali_lines()
+dragon_rows = ["".join(row) for row in logo.rows("big", kali=True)]
+check(len(dragon) == 17 and logo.kali_width() == 41 and logo.height("big", kali=True) == 17,
+      "Kali dragon keeps its original 17-row, 41-column native size")
+check(dragon_rows == [line.ljust(logo.kali_width(), "⠀") for line in dragon],
+      "Kali terminal rows preserve every original glyph and left-side blank")
 
 # ---------------------------------------------------------------- themes
 req = {"bg", "panel", "border", "accent", "bright", "hl", "text", "text2", "muted", "rem", "ok", "warn", "err", "brand_a", "brand_b",

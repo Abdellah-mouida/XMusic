@@ -34,14 +34,17 @@ def main(argv=None) -> int:
                                  "queue, playlists, shuffle/repeat and mouse support.", epilog=EPILOG,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--music-dir", "-d", metavar="DIR", help="music directory (default: last used, else ~/Music)")
-    ap.add_argument("--theme", metavar="ID", help="colour theme for this launch: " + ", ".join(themes.theme_ids()))
+    launch_mode = ap.add_mutually_exclusive_group()
+    launch_mode.add_argument("--theme", metavar="ID", help="colour theme for this launch: " + ", ".join(themes.theme_ids()))
+    launch_mode.add_argument("--kali", action="store_true",
+                             help="launch the full-size Kali dragon terminal layout")
     ap.add_argument("--no-animation", action="store_true", help="disable the intro, equalizer and transition effects")
     ap.add_argument("--ascii", action="store_true", help="use plain ASCII instead of box-drawing/block characters")
     ap.add_argument("--null-audio", action="store_true", help=argparse.SUPPRESS)   # silent backend for tests
     ap.add_argument("--version", action="version", version="XMusic " + __version__)
     args = ap.parse_args(argv)
 
-    theme_id = None
+    theme_id = "kali" if args.kali else None
     if args.theme:
         theme_id = themes.resolve(args.theme)
         if theme_id is None:
@@ -80,7 +83,8 @@ def main(argv=None) -> int:
     from .app import App
     try:
         app = App(str(root), settings, state, playlists, animate=settings["animation"] and not args.no_animation,
-                  null_audio=args.null_audio, ascii_mode=ascii_mode, theme_id=theme_id)
+                  null_audio=args.null_audio, ascii_mode=ascii_mode, theme_id=theme_id,
+                  kali_mode=args.kali)
         app.run()
     except KeyboardInterrupt:
         pass
